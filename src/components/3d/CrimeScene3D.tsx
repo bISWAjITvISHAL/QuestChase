@@ -19,6 +19,7 @@ interface SceneObjectHotspotProps {
 
 function SceneObjectHotspot({ position, action, onSelect }: SceneObjectHotspotProps) {
   const [hovered, setHovered] = useState(false);
+  const primaryAttr = action.reqAttributes ? Object.keys(action.reqAttributes)[0] : null;
 
   return (
     <group position={position}>
@@ -31,11 +32,11 @@ function SceneObjectHotspot({ position, action, onSelect }: SceneObjectHotspotPr
         }}
         visible={false}
       >
-        <sphereGeometry args={[0.3, 16, 16]} />
+        <sphereGeometry args={[0.35, 16, 16]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
 
-      <Html position={[0, 0.25, 0]} center distanceFactor={6}>
+      <Html position={[0, 0.28, 0]} center distanceFactor={6}>
         <button
           onClick={() => {
             soundEngine.playPaperRustle();
@@ -43,16 +44,16 @@ function SceneObjectHotspot({ position, action, onSelect }: SceneObjectHotspotPr
           }}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          className={`group flex items-center gap-2 px-2.5 py-1 rounded transition-all duration-200 ${
+          className={`group flex items-center gap-2 px-3 py-1.5 rounded-sm transition-all duration-200 tactile-btn ${
             action.isExecuted
-              ? 'bg-charcoal/80 border border-steel/40 text-parchment-dim opacity-75'
+              ? 'bg-charcoal/90 border border-steel/40 text-parchment-dim opacity-75'
               : hovered
-              ? 'bg-charcoal/95 border-2 border-crimson-bright shadow-crimson scale-105'
-              : 'bg-noir/90 border border-crimson/50 hover:border-gold shadow-noir'
+              ? 'bg-[#181410] border-2 border-gold shadow-gold scale-110 z-30'
+              : 'bg-noir/90 border border-crimson/60 hover:border-gold shadow-noir'
           }`}
         >
           <span
-            className={`w-2 h-2 rounded-full ${
+            className={`w-2.5 h-2.5 rounded-full shrink-0 ${
               action.isExecuted
                 ? 'bg-steel'
                 : hovered
@@ -64,8 +65,13 @@ function SceneObjectHotspot({ position, action, onSelect }: SceneObjectHotspotPr
             <div className="text-[10px] font-cinematic font-bold tracking-wider text-parchment">
               {action.sceneObjectName}
             </div>
-            <div className="text-[8px] text-parchment-dim typewriter-text">
-              {action.isExecuted ? '✓ EXAMINED' : `${action.costGold} GOLD`}
+            <div className="text-[8px] text-parchment-dim typewriter-text flex items-center gap-1.5">
+              <span>{action.isExecuted ? '✓ LOGGED' : `${action.costGold} GOLD`}</span>
+              {primaryAttr && !action.isExecuted && (
+                <span className="text-gold font-cinematic uppercase">
+                  • {primaryAttr.slice(0, 3)}
+                </span>
+              )}
             </div>
           </div>
         </button>

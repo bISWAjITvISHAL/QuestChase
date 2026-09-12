@@ -72,16 +72,16 @@ export type EvidenceType =
 export interface EvidenceItem {
   id: string;
   caseId: string;
-  title: string;
-  type: EvidenceType;
-  description: string;
-  detailedNotes: string;
-  source: string;
+  chapterId: string;
+  isDiscovered: boolean;
+  title?: string;
+  type?: EvidenceType;
+  description?: string;
+  detailedNotes?: string;
+  source?: string;
   reliability?: 'LOW' | 'MEDIUM' | 'HIGH' | 'ABSOLUTE';
   connectedSuspects?: string[];
-  isDiscovered: boolean;
   discoveredAt?: string;
-  chapterId: string;
   pinnedOnBoard?: boolean;
   boardPosition?: { x: number; y: number };
   contradictionPairId?: string;
@@ -129,7 +129,6 @@ export interface Suspect {
   alibi: string;
   motiveSummary: string;
   avatarUrl: string;
-  isCulprit: boolean;
   statusNotes: string;
 }
 
@@ -142,18 +141,6 @@ export interface CaseChapter {
   isUnlocked: boolean;
   isCompleted: boolean;
   requiredEvidenceCount: number;
-}
-
-export interface CaseSolution {
-  who: string; // Suspect ID or name
-  when: string; // Timeline time
-  how: string; // Method description
-  why: string; // Motive description
-  whoId: string; // Canonical suspect identifier
-  whenId: string; // Canonical timeline identifier
-  howId: string; // Canonical method identifier
-  whyId: string; // Canonical motive identifier
-  requiredEvidenceIds: string[];
 }
 
 export interface CaseFile {
@@ -170,7 +157,6 @@ export interface CaseFile {
   evidence: EvidenceItem[];
   actions: InvestigationAction[];
   connections: EvidenceConnection[];
-  solution: CaseSolution;
   rewardXp: number;
   rewardGold: number;
   rewardBadge: string;

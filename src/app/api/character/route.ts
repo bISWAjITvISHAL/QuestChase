@@ -71,11 +71,23 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const updatePayload: Record<string, unknown> = {};
 
-    if (body.name !== undefined) updatePayload.name = String(body.name).trim().substring(0, 60);
-    if (body.settings !== undefined) updatePayload.settings = body.settings;
+    if (body.name !== undefined) {
+      const sanitizedName = String(body.name).trim().substring(0, 60);
+      if (sanitizedName.length > 0) {
+        updatePayload.name = sanitizedName;
+      }
+    }
+
+    if (body.settings !== undefined && typeof body.settings === 'object' && body.settings !== null) {
+      updatePayload.settings = {
+        audioEnabled: Boolean(body.settings.audioEnabled ?? true),
+        ambienceEnabled: Boolean(body.settings.ambienceEnabled ?? true),
+        reducedMotion: Boolean(body.settings.reducedMotion ?? false),
+      };
+    }
 
     if (Object.keys(updatePayload).length === 0) {
-      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+      return NextResponse.json({ error: 'No valid editable fields provided (only name and settings permitted)' }, { status: 400 });
     }
 
     updatePayload.updated_at = new Date().toISOString();

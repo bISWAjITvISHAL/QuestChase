@@ -160,7 +160,7 @@ export default function LandingPage() {
           <div className="lg:col-span-6 space-y-6 text-left">
             <div className="inline-flex items-center gap-2 bg-charcoal/90 border border-gold/40 px-3 py-1 rounded text-[10px] font-cinematic font-bold text-gold tracking-widest shadow-noir">
               <span className="w-1.5 h-1.5 rounded-full bg-crimson animate-ping" />
-              <span>CASE FILE // QUESTCHASE</span>
+              <span>METROPOLITAN INVESTIGATION BUREAU // CASE #001</span>
             </div>
 
             <h1 className="text-4xl sm:text-6xl font-cinematic font-black text-parchment tracking-tight leading-[1.05]">
@@ -170,41 +170,46 @@ export default function LandingPage() {
               </span>
             </h1>
 
-            <p className="text-sm sm:text-base text-parchment-dim typewriter-text leading-relaxed max-w-xl">
-              Turn everyday tasks into quests, build your detective skills, earn investigation resources, and solve the murder case waiting for you.
-            </p>
+            <div className="space-y-2">
+              <p className="text-base sm:text-lg text-parchment font-cinematic font-bold tracking-wide">
+                Complete your tasks. Follow the clues. Solve the case.
+              </p>
+              <p className="text-xs sm:text-sm text-parchment-dim typewriter-text leading-relaxed max-w-xl">
+                Transform your daily productivity into investigative currency. Every completed objective earns XP and Gold to interrogate suspects, analyze crime scenes, and deduce the truth behind Lord Blackwood's murder.
+              </p>
+            </div>
 
             <div className="pt-2 flex flex-wrap items-center gap-4">
               <button
                 onClick={handleBeginInvestigation}
-                className="flex items-center gap-2.5 bg-gradient-to-r from-gold to-gold-bright hover:from-gold-bright hover:to-gold text-noir font-cinematic font-black py-3.5 px-7 rounded-sm shadow-gold transition-all duration-300 text-sm tracking-wider active:scale-95"
+                className="flex items-center gap-2.5 bg-gradient-to-r from-gold to-gold-bright hover:from-gold-bright hover:to-gold text-noir font-cinematic font-black py-3.5 px-7 rounded-sm shadow-gold transition-all duration-300 text-xs sm:text-sm tracking-wider active:scale-95 tactile-btn"
               >
-                <span>BEGIN INVESTIGATION</span>
+                <span>START YOUR INVESTIGATION</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
               <a
                 href="#how-it-works"
-                className="text-xs font-cinematic font-bold text-parchment-dim hover:text-gold tracking-widest uppercase transition flex items-center gap-1.5 py-3 px-4"
+                className="text-xs font-cinematic font-bold text-parchment-dim hover:text-gold tracking-widest uppercase transition flex items-center gap-1.5 py-3 px-4 border border-steel/30 rounded-sm hover:border-gold/40 bg-charcoal/40"
               >
-                <span>SEE HOW IT WORKS</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>HOW IT WORKS</span>
+                <ArrowRight className="w-3.5 h-3.5 text-gold" />
               </a>
             </div>
 
-            {/* Quick Micro-Stats */}
+            {/* Quick Micro-Stats (Clean Typographic Formulation) */}
             <div className="pt-4 grid grid-cols-3 gap-3 border-t border-steel/20 max-w-md">
               <div>
-                <div className="text-[10px] text-parchment-dim typewriter-text">SOLVABLE MYSTERY</div>
-                <div className="text-sm font-cinematic font-bold text-gold">CASE #001 READY</div>
+                <div className="text-[10px] text-parchment-dim typewriter-text uppercase">ACTIVE DOSSIER</div>
+                <div className="text-xs sm:text-sm font-cinematic font-bold text-gold">CASE #001 READY</div>
               </div>
               <div>
-                <div className="text-[10px] text-parchment-dim typewriter-text">RPG STATS</div>
-                <div className="text-sm font-cinematic font-bold text-parchment">4 CORE ATTRIBUTES</div>
+                <div className="text-[10px] text-parchment-dim typewriter-text uppercase">DETECTIVE STATS</div>
+                <div className="text-xs sm:text-sm font-cinematic font-bold text-parchment">4 CORE ATTRIBUTES</div>
               </div>
               <div>
-                <div className="text-[10px] text-parchment-dim typewriter-text">FUEL LOOP</div>
-                <div className="text-sm font-cinematic font-bold text-emerald-400">QUESTS $\rightarrow$ CLUES</div>
+                <div className="text-[10px] text-parchment-dim typewriter-text uppercase">GAMEPLAY ENGINE</div>
+                <div className="text-xs sm:text-sm font-cinematic font-bold text-amber-400">QUESTS → CLUES</div>
               </div>
             </div>
           </div>
@@ -212,7 +217,7 @@ export default function LandingPage() {
           {/* Right Column: Interactive Live Detective Widget matching Mockup 1 */}
           <div className="lg:col-span-6 relative">
             {/* Main Interactive Floating HUD Card */}
-            <div className="relative bg-charcoal/95 backdrop-blur-xl border-2 border-gold/50 rounded-sm p-5 sm:p-6 shadow-dossier z-10">
+            <div className="relative bg-charcoal/95 backdrop-blur-xl border border-gold/40 rounded-sm p-5 sm:p-6 shadow-dossier z-10">
               {/* Card Header Status Bar */}
               <div className="flex flex-wrap items-center justify-between gap-3 bg-noir/90 border border-gold/30 rounded-sm p-3 mb-5">
                 {/* Level */}
@@ -398,69 +403,89 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Feature 1: Quests */}
-            <div className="bg-charcoal/90 border border-gold/30 rounded-sm p-6 flex flex-col justify-between hover:border-gold transition shadow-dossier group">
+            {/* Feature 1: Quests as Tactile Paper Casework Docket */}
+            <div className="paper-slip rounded-sm p-6 flex flex-col justify-between shadow-xl relative group tactile-card border border-[#d4c5a9]">
+              {/* Paperclip */}
+              <div className="absolute -top-3 left-6 w-4 h-8 rounded-full border-2 border-slate-600 bg-transparent pointer-events-none opacity-80" />
+
               <div>
-                <div className="w-12 h-12 rounded bg-noir border border-gold/50 flex items-center justify-center text-gold mb-4 group-hover:scale-110 transition">
-                  <CheckSquare className="w-6 h-6 text-gold" />
+                <div className="flex items-center justify-between pl-6 mb-3">
+                  <span className="text-[10px] font-cinematic font-bold text-[#5a422d] uppercase tracking-wider">
+                    DOCKET #QC-TASK
+                  </span>
+                  <span className="stamp-priority text-[9px] px-1.5 py-0.5 bg-red-100/60 rounded">
+                    HIGH PRIORITY
+                  </span>
                 </div>
-                <div className="text-[10px] font-cinematic font-bold text-crimson-bright uppercase mb-1">
-                  TACTICAL CASEWORK
-                </div>
-                <h3 className="text-xl font-cinematic font-bold text-parchment mb-2">
-                  QUESTS
+
+                <h3 className="text-xl font-cinematic font-black text-[#1a1714] mb-2 tracking-wide">
+                  REAL-WORLD QUESTS
                 </h3>
-                <p className="text-xs text-parchment-dim typewriter-text leading-relaxed">
-                  Turn your real life into missions. Select difficulty tiers (E through A) to yield escalating XP, Gold, and specific Attribute XP upon completion.
+                <p className="text-xs text-[#4a3b2c] typewriter-text leading-relaxed">
+                  Turn physical objectives into high-stakes casework. Choose tiers E through A to commission daily productivity that produces tangible XP and investigative Gold.
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-steel/20 text-[10px] text-gold font-cinematic font-bold flex items-center gap-1">
-                <span>REWARDS: XP + GOLD + ATTRIBUTE PROGRESS</span>
+              <div className="mt-6 pt-4 border-t border-[#c5b599] flex items-center justify-between text-[10px] typewriter-text text-[#2b2219]">
+                <span className="font-bold">YIELD:</span>
+                <span className="font-cinematic font-bold text-[#8c6527]">XP + GOLD + ATTRIBUTE PTS</span>
               </div>
             </div>
 
-            {/* Feature 2: Attributes */}
-            <div className="bg-charcoal/90 border border-gold/30 rounded-sm p-6 flex flex-col justify-between hover:border-gold transition shadow-dossier group">
+            {/* Feature 2: Attributes as Bureau Clearance Dossier */}
+            <div className="bg-[#151310] border border-gold/40 rounded-sm p-6 flex flex-col justify-between shadow-dossier relative group tactile-card">
               <div>
-                <div className="w-12 h-12 rounded bg-noir border border-gold/50 flex items-center justify-center text-gold mb-4 group-hover:scale-110 transition">
-                  <Brain className="w-6 h-6 text-gold" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 rounded-full bg-noir border border-gold/50 flex items-center justify-center text-gold shadow-gold">
+                    <Brain className="w-5 h-5 text-gold" />
+                  </div>
+                  <span className="text-[9px] font-cinematic font-bold text-gold uppercase tracking-widest px-2 py-0.5 bg-gold/10 border border-gold/30 rounded">
+                    CLEARANCE DOSSIER
+                  </span>
                 </div>
-                <div className="text-[10px] font-cinematic font-bold text-crimson-bright uppercase mb-1">
-                  RPG CHARACTER SHEET
-                </div>
-                <h3 className="text-xl font-cinematic font-bold text-parchment mb-2">
-                  ATTRIBUTES
+
+                <h3 className="text-xl font-cinematic font-black text-parchment mb-2 tracking-wide">
+                  DETECTIVE ATTRIBUTES
                 </h3>
                 <p className="text-xs text-parchment-dim typewriter-text leading-relaxed">
-                  Your productivity builds your detective. Level up <strong>Intelligence</strong> (digital forensics), <strong>Perception</strong> (physical clues), <strong>Discipline</strong> (interrogation), and <strong>Resilience</strong> (high-risk leads).
+                  Your casework hones four core proficiencies: <strong>Intelligence</strong> (digital forensics), <strong>Perception</strong> (physical clues), <strong>Discipline</strong> (interrogation tenacity), and <strong>Resilience</strong> (undercover pressure).
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-steel/20 text-[10px] text-gold font-cinematic font-bold flex items-center gap-1">
-                <span>UNLOCKS ALTERNATE INVESTIGATION ROUTES</span>
+              <div className="mt-6 pt-4 border-t border-steel/20 flex items-center justify-between text-[10px] typewriter-text text-parchment-dim">
+                <span>SYSTEM:</span>
+                <span className="font-cinematic font-bold text-gold">UNLOCKS SPECIALIST LEADS</span>
               </div>
             </div>
 
-            {/* Feature 3: Investigation */}
-            <div className="bg-charcoal/90 border border-gold/30 rounded-sm p-6 flex flex-col justify-between hover:border-gold transition shadow-dossier group">
+            {/* Feature 3: Investigation as Crime Scene Evidence Kit */}
+            <div className="bg-[#111317] border border-crimson/50 rounded-sm p-6 flex flex-col justify-between shadow-noir relative group tactile-card">
+              {/* Evidence Tag */}
+              <div className="absolute -top-2.5 right-6 bg-crimson text-parchment text-[8px] font-cinematic font-bold px-2 py-0.5 rounded tracking-widest uppercase shadow-crimson">
+                HOTSPOT EXAM
+              </div>
+
               <div>
-                <div className="w-12 h-12 rounded bg-noir border border-gold/50 flex items-center justify-center text-gold mb-4 group-hover:scale-110 transition">
-                  <Search className="w-6 h-6 text-gold" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 rounded-full bg-noir border border-crimson/50 flex items-center justify-center text-crimson-bright shadow">
+                    <Search className="w-5 h-5 text-crimson-bright" />
+                  </div>
+                  <span className="text-[9px] font-cinematic font-bold text-crimson-bright uppercase tracking-widest">
+                    FORENSIC DEPLOYMENT
+                  </span>
                 </div>
-                <div className="text-[10px] font-cinematic font-bold text-crimson-bright uppercase mb-1">
-                  FORENSIC ACTIONS
-                </div>
-                <h3 className="text-xl font-cinematic font-bold text-parchment mb-2">
-                  INVESTIGATION
+
+                <h3 className="text-xl font-cinematic font-black text-parchment mb-2 tracking-wide">
+                  CRIME SCENE FORENSICS
                 </h3>
                 <p className="text-xs text-parchment-dim typewriter-text leading-relaxed">
-                  Spend your hard-earned Gold to conduct forensic inspections: Search the study, recover deleted laptop sectors, interrogate suspects, and pin evidence threads.
+                  Expend earned Gold directly on the 3D crime scene: examine the mahogany desk, recover deleted laptop sectors, and unmask contradictory alibis on the evidence board.
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-steel/20 text-[10px] text-gold font-cinematic font-bold flex items-center gap-1">
-                <span>UNCOVERS CLUES, CONTRADICTIONS & MOTIVES</span>
+              <div className="mt-6 pt-4 border-t border-steel/20 flex items-center justify-between text-[10px] typewriter-text text-parchment-dim">
+                <span>ACTION:</span>
+                <span className="font-cinematic font-bold text-crimson-bright">PINS EVIDENCE & RED YARN</span>
               </div>
             </div>
           </div>
@@ -518,7 +543,7 @@ export default function LandingPage() {
             <div className="flex justify-end">
               <button
                 onClick={handleBeginInvestigation}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-gold to-gold-bright text-noir font-cinematic font-bold text-xs py-2.5 px-6 rounded-sm shadow-gold transition active:scale-95"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-gold to-gold-bright text-noir font-cinematic font-bold text-xs py-2.5 px-6 rounded-sm shadow-gold transition active:scale-95 tactile-btn"
               >
                 <span>OPEN CASEFILE</span>
                 <ArrowRight className="w-4 h-4" />
@@ -534,14 +559,17 @@ export default function LandingPage() {
           <div className="text-xs font-cinematic font-bold tracking-widest text-gold uppercase mb-2">
             START YOUR INVESTIGATION
           </div>
-          <h2 className="text-3xl sm:text-5xl font-cinematic font-black text-parchment tracking-tight mb-6">
+          <h2 className="text-3xl sm:text-5xl font-cinematic font-black text-parchment tracking-tight mb-4">
             EVERY DAY LEAVES A CLUE.
           </h2>
+          <p className="text-xs sm:text-sm text-parchment-dim typewriter-text mb-6">
+            Complete your tasks. Follow the clues. Solve the case.
+          </p>
           <button
             onClick={handleBeginInvestigation}
-            className="bg-gradient-to-r from-gold to-gold-bright hover:from-gold-bright hover:to-gold text-noir font-cinematic font-black py-4 px-10 rounded-sm shadow-gold transition-all duration-300 text-sm sm:text-base tracking-widest active:scale-95"
+            className="bg-gradient-to-r from-gold to-gold-bright hover:from-gold-bright hover:to-gold text-noir font-cinematic font-black py-4 px-10 rounded-sm shadow-gold transition-all duration-300 text-xs sm:text-sm tracking-widest active:scale-95 tactile-btn"
           >
-            START CHASING
+            START YOUR INVESTIGATION
           </button>
         </div>
       </section>

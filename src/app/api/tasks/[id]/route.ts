@@ -21,10 +21,43 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     const body = await request.json();
     const updatePayload: Record<string, unknown> = {};
 
-    if (body.title !== undefined) updatePayload.title = String(body.title).trim().substring(0, 120);
-    if (body.description !== undefined) updatePayload.description = String(body.description).trim().substring(0, 500);
-    if (body.category !== undefined) updatePayload.category = body.category;
-    if (body.priority !== undefined) updatePayload.priority = body.priority;
+    const VALID_CATEGORIES = ['Intelligence', 'Perception', 'Discipline', 'Resilience'];
+    const VALID_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+
+    if (body.title !== undefined) {
+      const trimmed = String(body.title).trim().substring(0, 120);
+      if (trimmed.length > 0) updatePayload.title = trimmed;
+    }
+    if (body.description !== undefined) {
+      updatePayload.description = String(body.description).trim().substring(0, 500);
+    }
+    if (body.category !== undefined) {
+      if (!VALID_CATEGORIES.includes(String(body.category))) {
+        return NextResponse.json({ error: `Invalid category. Permitted: ${VALID_CATEGORIES.join(', ')}` }, { status: 400 });
+      }
+      updatePayload.category = body.category;
+    }
+    if (body.priority !== undefined) {
+      if (!VALID_PRIORITIES.includes(String(body.priority))) {
+        return NextResponse.json({ error: `Invalid priority. Permitted: ${VALID_PRIORITIES.join(', ')}` }, { status: 400 });
+      }
+      updatePayload.priority = body.priority;
+    }
+
+    // Explicitly reject tampering with immutable/reward fields
+    if (
+      body.difficulty !== undefined ||
+      body.is_completed !== undefined ||
+      body.isCompleted !== undefined ||
+      body.xp_reward !== undefined ||
+      body.gold_reward !== undefined ||
+      body.attribute_rewards !== undefined
+    ) {
+      return NextResponse.json(
+        { error: 'Security Violation: Quest difficulty, rewards, and completion status cannot be modified directly.' },
+        { status: 400 }
+      );
+    }
 
     if (Object.keys(updatePayload).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });

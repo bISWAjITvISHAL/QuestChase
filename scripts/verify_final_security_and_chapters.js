@@ -31,13 +31,30 @@ function runAudit() {
   const migration003Exists = fs.existsSync(migration003Path);
   assert(migration003Exists, 'Phase 1: Migration 003 file exists');
 
-  const migration003Content = migration003Exists ? fs.readFileSync(migration003Path, 'utf8') : '';
+  const migration003Content = migration003Exists ? fs.readFileSync(migration003Path, 'utf8').replace(/\r\n/g, '\n') : '';
   assert(
     migration003Content.includes('DROP FUNCTION IF EXISTS public.execute_investigation_action_atomic(') &&
     migration003Content.includes('UUID,') &&
     migration003Content.includes('INT,') &&
     migration003Content.includes('INT\n);'),
     'Phase 1: Migration 003 explicitly drops legacy 6-argument overload'
+  );
+
+  // -------------------------------------------------------------
+  // PHASE 1B: Migration 004 Quest Completion & Anti-Exploit Security
+  // -------------------------------------------------------------
+  const migration004Path = path.join(rootDir, 'supabase/migrations/004_fix_quest_completion_and_security.sql');
+  const migration004Exists = fs.existsSync(migration004Path);
+  assert(migration004Exists, 'Phase 1B: Migration 004 file exists');
+
+  const migration004Content = migration004Exists ? fs.readFileSync(migration004Path, 'utf8').replace(/\r\n/g, '\n') : '';
+  assert(
+    migration004Content.includes('public.apply_xp_and_level_up(') &&
+    migration004Content.includes('v_intelligence_gain') &&
+    migration004Content.includes('v_last_active = v_today - 1') &&
+    migration004Content.includes('reward_transactions') &&
+    migration004Content.includes('eq_chronograph_'),
+    'Phase 1B: Migration 004 provides authoritative 5-arg apply_xp_and_level_up, attribute scaling, date-based streak, and Chronograph anti-exploit'
   );
 
   // Check no client or active API route calls the 6-parameter version
@@ -240,18 +257,18 @@ function runAudit() {
   );
 
   // -------------------------------------------------------------
-  // PHASE 16: Case #001 Timeline Consistency (22:25 PM)
+  // PHASE 16: Case #001 Timeline Consistency (22:25)
   // -------------------------------------------------------------
   const serverCaseSolutions = fs.readFileSync(path.join(rootDir, 'src/lib/serverCaseSolutions.ts'), 'utf8');
   assert(
     serverCaseSolutions.includes("whenId: 'time_2225'") &&
-    serverCaseSolutions.includes("whenLabel: '22:25 PM'"),
-    'Phase 16: Server case solution uses 22:25 PM as authoritative crime time'
+    serverCaseSolutions.includes("whenLabel: '22:25'"),
+    'Phase 16: Server case solution uses 22:25 as authoritative crime time'
   );
   assert(
-    serverCaseData.includes('Hands stopped at 22:24 PM') &&
-    serverCaseData.includes('departing at 22:31 PM, not 22:00 PM'),
-    'Phase 16: Timeline clues prove 22:25 PM (watch broken at 22:24, carriage left at 22:31)'
+    serverCaseData.includes('Hands stopped at 22:24') &&
+    serverCaseData.includes('departing at 22:31, not 22:00'),
+    'Phase 16: Timeline clues prove 22:25 (watch broken at 22:24, carriage left at 22:31)'
   );
 
   // -------------------------------------------------------------

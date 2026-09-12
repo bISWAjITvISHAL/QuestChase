@@ -151,9 +151,12 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-cinematic font-bold text-parchment uppercase tracking-wider mb-1.5">
-              CLEARANCE CIPHER KEY (PASSWORD) *
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-cinematic font-bold text-parchment uppercase tracking-wider">
+                CLEARANCE CIPHER (PASSWORD) *
+              </label>
+              <span className="text-[10px] typewriter-text text-steel">Choose a password for your case desk</span>
+            </div>
             <div className="relative">
               <Lock className="w-4 h-4 text-gold absolute left-3 top-1/2 -translate-y-1/2" />
               <input
@@ -162,7 +165,7 @@ export default function RegisterPage() {
                 minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Minimum 6 characters..."
+                placeholder="Choose a password for your case desk (min 6 chars)..."
                 className="w-full bg-[#0b0c0e] border border-steel/40 focus:border-gold rounded pl-10 pr-3 py-2.5 text-xs text-parchment font-medium typewriter-text outline-none transition placeholder:text-steel focus:ring-1 focus:ring-gold/30"
               />
             </div>

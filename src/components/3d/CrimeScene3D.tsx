@@ -84,14 +84,15 @@ function SceneObjectHotspot({ position, action, onSelect }: SceneObjectHotspotPr
 export function CrimeScene3D({ actions, onSelectAction, hideHotspots = false }: CrimeScene3DProps) {
   // Coordinate mappings for case 001 crime scene items
   const actionPositions: Record<string, [number, number, number]> = {
-    act_01: [-0.3, 1.0, 0.1], // Tumbler
-    act_02: [0.8, 0.3, 0.2], // Wastebasket
+    act_01: [-0.3, 1.0, 0.1], // Victim Mahogany Desk & Tumbler
+    act_08: [0.8, 0.3, 0.2], // Study Wastebasket
     act_03: [-1.4, 2.1, -1.8], // Wall Safe behind painting
-    act_04: [0.2, 0.75, 0.3], // False bottom drawer
-    act_05: [-2.6, 1.2, 1.0], // Gate logbook
-    act_06: [1.8, 0.9, -0.6], // Doctor bag
-    act_07: [2.2, 1.4, 1.2], // Julian Vance
-    act_08: [0.1, 0.92, -0.1], // Cyanide fountain pen
+    act_02: [0.8, 0.95, 0.2], // Arthur's Laptop Terminal
+    act_04: [-2.6, 0.4, 1.2], // Garden Shed & Flowerbed
+    act_05: [-2.6, 1.2, 1.0], // Gatekeeper Register Log
+    act_06: [2.2, 1.4, 1.2], // Interrogation Suite (Marcus Vance)
+    act_09: [1.8, 0.9, -0.6], // Physician's Quarters (Dr. Elena)
+    act_07: [0.1, 0.92, -0.1], // East Library Wing (Desk Pen)
   };
 
   // Only render hotspots for unexecuted actions so purchased clues completely disappear from the scene

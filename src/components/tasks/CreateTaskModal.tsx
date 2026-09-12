@@ -194,13 +194,30 @@ export function CreateTaskModal({ isOpen, onClose }: CreateTaskModalProps) {
 
           {/* Difficulty Tier */}
           <div>
-            <label className="block text-xs font-cinematic font-bold text-parchment uppercase tracking-wider mb-1.5 flex items-center justify-between">
-              <span>DIFFICULTY TIER & RESOURCE YIELD:</span>
-              <span className="text-[10px] text-gold font-bold">TIER {difficulty}</span>
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-cinematic font-bold text-parchment uppercase tracking-wider">
+                DIFFICULTY / EFFORT &amp; REWARD:
+              </label>
+              <span className="text-[10px] text-gold font-bold font-cinematic">
+                {difficulty === 'E' || difficulty === 'D'
+                  ? `EASY (TIER ${difficulty})`
+                  : difficulty === 'C' || difficulty === 'B'
+                  ? `MEDIUM (TIER ${difficulty})`
+                  : `HARD (TIER ${difficulty})`}
+              </span>
+            </div>
 
             <div className="grid grid-cols-6 gap-1 sm:gap-2 mb-3">
-              {(['E', 'D', 'C', 'B', 'A', 'S'] as TaskDifficulty[]).map((tier) => {
+              {(
+                [
+                  { tier: 'E' as TaskDifficulty, label: 'E', sub: 'Easy' },
+                  { tier: 'D' as TaskDifficulty, label: 'D', sub: 'Easy' },
+                  { tier: 'C' as TaskDifficulty, label: 'C', sub: 'Med' },
+                  { tier: 'B' as TaskDifficulty, label: 'B', sub: 'Med' },
+                  { tier: 'A' as TaskDifficulty, label: 'A', sub: 'Hard' },
+                  { tier: 'S' as TaskDifficulty, label: 'S', sub: 'Hard' },
+                ]
+              ).map(({ tier, label, sub }) => {
                 const isSelected = difficulty === tier;
                 return (
                   <button
@@ -210,13 +227,16 @@ export function CreateTaskModal({ isOpen, onClose }: CreateTaskModalProps) {
                       soundEngine.playPaperRustle();
                       setDifficulty(tier);
                     }}
-                    className={`py-2 text-center rounded border font-cinematic font-bold text-xs transition min-h-[44px] cursor-pointer ${
+                    className={`py-1.5 px-1 text-center rounded border font-cinematic font-bold text-xs transition min-h-[44px] cursor-pointer flex flex-col items-center justify-center ${
                       isSelected
                         ? 'bg-crimson/30 text-parchment border-crimson shadow-crimson ring-1 ring-red-400'
                         : 'bg-[#18191c] text-parchment-dim border-steel/30 hover:border-gold/50'
                     }`}
                   >
-                    {tier}
+                    <span className="text-xs leading-none">{label}</span>
+                    <span className={`text-[8px] uppercase tracking-tight mt-0.5 ${isSelected ? 'text-gold' : 'text-steel'}`}>
+                      {sub}
+                    </span>
                   </button>
                 );
               })}

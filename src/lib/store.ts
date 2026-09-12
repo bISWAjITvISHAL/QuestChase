@@ -90,7 +90,7 @@ interface GameState {
     howId: string,
     whyId: string,
     selectedEvidenceIds?: string[]
-  ) => Promise<{ isCorrect: boolean; feedback: string }>;
+  ) => Promise<{ isCorrect: boolean; feedback: string; rewardXp?: number; rewardGold?: number; rewardBadge?: string }>;
 
   // Equipment Actions
   purchaseEquipment: (itemId: string) => Promise<boolean>;
@@ -337,27 +337,51 @@ export const useGameStore = create<GameState>((set, get) => ({
       tasks: [localTask, ...state.tasks],
     }));
 
-    // Success toast notification immediately
-    get().addToast({
-      type: 'success',
-      title: 'QUEST DOCKET FILED',
-      message: `${localTask.title} commissioned to detective desk.`,
-    });
+    // 2. If authenticated, persist to backend API
+    if (get().isAuthenticated) {
+      try {
+        const response = await apiFetch('/api/tasks', {
+          method: 'POST',
+          body: JSON.stringify(taskInput),
+        });
 
-    // 2. Attempt sync with backend API if authenticated
-    try {
-      const response = await apiFetch('/api/tasks', {
-        method: 'POST',
-        body: JSON.stringify(taskInput),
-      });
-
-      if (response?.success && response?.task) {
+        if (response?.success && response?.task) {
+          set((state) => ({
+            tasks: state.tasks.map((t) => (t.id === localTask.id ? response.task : t)),
+          }));
+          get().addToast({
+            type: 'success',
+            title: 'QUEST DOCKET FILED',
+            message: `${localTask.title} commissioned to detective desk.`,
+          });
+        } else {
+          // Revert optimistic task on server failure
+          set((state) => ({
+            tasks: state.tasks.filter((t) => t.id !== localTask.id),
+          }));
+          get().addToast({
+            type: 'error',
+            title: 'FILING FAILED',
+            message: response?.error || 'Unable to file quest docket to server.',
+          });
+        }
+      } catch (err: unknown) {
         set((state) => ({
-          tasks: state.tasks.map((t) => (t.id === localTask.id ? response.task : t)),
+          tasks: state.tasks.filter((t) => t.id !== localTask.id),
         }));
+        get().addToast({
+          type: 'error',
+          title: 'FILING ERROR',
+          message: 'Network error preventing docket creation.',
+        });
       }
-    } catch (err: unknown) {
-      console.warn('Backend quest sync deferred (running in local/guest mode):', err);
+    } else {
+      // Guest mode
+      get().addToast({
+        type: 'success',
+        title: 'QUEST DOCKET FILED',
+        message: `${localTask.title} commissioned to detective desk.`,
+      });
     }
   },
 
@@ -464,7 +488,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       set({ activeStampTaskId: null });
     }, 1200);
 
-    // Optimistic mark completed in memory
+    // Snapshot state before optimistic update
     const previousTasks = get().tasks;
     const previousProfile = get().profile;
 
@@ -474,46 +498,60 @@ export const useGameStore = create<GameState>((set, get) => ({
       ),
     }));
 
+    const isLocalGuestTask = id.startsWith('task_') || !get().isAuthenticated;
+
     try {
-      const response = !id.startsWith('task_')
+      const response = !isLocalGuestTask
         ? await apiFetch(`/api/tasks/${id}/complete`, { method: 'POST' })
         : null;
 
-      if (response?.success && response.profile) {
-        // Authoritative update from server
-        set((state) => ({
-          profile: response.profile,
-          tasks: state.tasks.map((t) => (t.id === id ? response.task : t)),
-        }));
+      if (!isLocalGuestTask) {
+        if (response?.success && response.profile) {
+          // Authoritative update from server
+          set((state) => ({
+            profile: response.profile,
+            tasks: state.tasks.map((t) => (t.id === id ? response.task : t)),
+          }));
 
-        // Reward Toast notification
-        get().addToast({
-          type: 'reward',
-          title: 'QUEST DOCKET COMPLETED',
-          message: task.title,
-          xpReward: task.xpReward,
-          goldReward: task.goldReward || 20,
-        });
-
-        if (response.levelUp?.didLevelUp) {
-          soundEngine.playLevelUp();
-          set({
-            levelUpModalOpen: true,
-            levelUpData: {
-              oldLevel: response.levelUp.oldLevel || previousProfile.level,
-              oldRank: previousProfile.rank,
-              newLevel: response.levelUp.newLevel,
-              newRank: response.levelUp.rank,
-              bonusGold: response.levelUp.bonusGold || 50,
-              unlockedTitle: `CLEARANCE GRADE ${response.levelUp.newLevel} • ${response.levelUp.rank}`,
-            },
+          // Reward Toast notification
+          get().addToast({
+            type: 'reward',
+            title: 'QUEST COMPLETED',
+            message: `${task.title} • Your progress funds the investigation!`,
+            xpReward: task.xpReward,
+            goldReward: task.goldReward || 20,
           });
-        }
 
-        get().checkAchievements();
-        return { success: true };
+          if (response.levelUp?.didLevelUp) {
+            soundEngine.playLevelUp();
+            set({
+              levelUpModalOpen: true,
+              levelUpData: {
+                oldLevel: response.levelUp.oldLevel || previousProfile.level,
+                oldRank: previousProfile.rank,
+                newLevel: response.levelUp.newLevel,
+                newRank: response.levelUp.rank,
+                bonusGold: response.levelUp.bonusGold || 50,
+                unlockedTitle: `CLEARANCE GRADE ${response.levelUp.newLevel} • ${response.levelUp.rank}`,
+              },
+            });
+          }
+
+          get().checkAchievements();
+          return { success: true };
+        } else {
+          // Rollback on server failure
+          set({ tasks: previousTasks, profile: previousProfile });
+          const errorMsg = response?.error || 'Database sync failed. Quest completion could not be verified.';
+          get().addToast({
+            type: 'error',
+            title: 'COMPLETION FAILED',
+            message: errorMsg,
+          });
+          return { success: false, message: errorMsg };
+        }
       } else {
-        // Local/demo fallback rewards
+        // Local/guest mode rewards
         const newXp = previousProfile.xp + task.xpReward;
         const newGold = previousProfile.gold + (task.goldReward || 20);
         const newLevel = Math.floor(newXp / 500) + 1;
@@ -528,8 +566,8 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         get().addToast({
           type: 'reward',
-          title: 'QUEST DOCKET COMPLETED',
-          message: task.title,
+          title: 'QUEST COMPLETED',
+          message: `${task.title} • Your progress funds the investigation!`,
           xpReward: task.xpReward,
           goldReward: task.goldReward || 20,
         });
@@ -538,29 +576,41 @@ export const useGameStore = create<GameState>((set, get) => ({
         return { success: true };
       }
     } catch (err: unknown) {
-      // Local fallback on server error
-      const newXp = previousProfile.xp + task.xpReward;
-      const newGold = previousProfile.gold + (task.goldReward || 20);
-      const newLevel = Math.floor(newXp / 500) + 1;
-      set((state) => ({
-        profile: {
-          ...state.profile,
-          xp: newXp,
-          gold: newGold,
-          level: newLevel,
-        },
-      }));
+      if (!isLocalGuestTask) {
+        // Rollback on server error
+        set({ tasks: previousTasks, profile: previousProfile });
+        const errMsg = err instanceof Error ? err.message : 'Database sync failed';
+        get().addToast({
+          type: 'error',
+          title: 'COMPLETION FAILED',
+          message: errMsg,
+        });
+        return { success: false, message: errMsg };
+      } else {
+        // Local/guest mode fallback
+        const newXp = previousProfile.xp + task.xpReward;
+        const newGold = previousProfile.gold + (task.goldReward || 20);
+        const newLevel = Math.floor(newXp / 500) + 1;
+        set((state) => ({
+          profile: {
+            ...state.profile,
+            xp: newXp,
+            gold: newGold,
+            level: newLevel,
+          },
+        }));
 
-      get().addToast({
-        type: 'reward',
-        title: 'QUEST DOCKET COMPLETED',
-        message: task.title,
-        xpReward: task.xpReward,
-        goldReward: task.goldReward || 20,
-      });
+        get().addToast({
+          type: 'reward',
+          title: 'QUEST COMPLETED',
+          message: `${task.title} • Your progress funds the investigation!`,
+          xpReward: task.xpReward,
+          goldReward: task.goldReward || 20,
+        });
 
-      get().checkAchievements();
-      return { success: true };
+        get().checkAchievements();
+        return { success: true };
+      }
     }
   },
 
@@ -840,6 +890,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       return {
         isCorrect: Boolean(response.isCorrect),
         feedback: response.feedback || (response.isCorrect ? 'Case solved!' : 'Deduction rejected'),
+        rewardXp: response.rewardXp,
+        rewardGold: response.rewardGold,
+        rewardBadge: response.rewardBadge,
       };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to submit deduction';

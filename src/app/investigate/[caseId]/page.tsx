@@ -68,7 +68,10 @@ export default function InvestigatePage() {
           setRevealedEvidence(ev);
         }
       } else {
-        setFeedbackMessage({ type: 'error', text: result.message });
+        setFeedbackMessage({
+          type: 'error',
+          text: result.message || 'Unable to access evidence. Your Gold was not deducted.',
+        });
       }
     } finally {
       setIsInvestigating(false);
@@ -84,7 +87,7 @@ export default function InvestigatePage() {
               METROPOLITAN INVESTIGATION BUREAU • ARCHIVES
             </div>
             <h1 className="text-2xl font-cinematic font-black text-parchment tracking-wide mb-2">
-              CASE #002: THE SYNDICATE&apos;S WEB
+              CASE #002: THE SILENT WITNESS
             </h1>
             <div className="inline-block bg-noir border border-steel/50 px-3 py-1 text-xs text-steel font-cinematic font-bold tracking-wider uppercase mb-4">
               CLASSIFIED DOSSIER UNDER BUREAU PREPARATION

@@ -129,13 +129,20 @@ export default function DetectivesDeskPage() {
 
               {tasks.length === 0 && (
                 <div className="paper-slip rounded-sm p-8 text-center border border-[#d4c5a9]">
-                  <CheckCircle className="w-8 h-8 text-[#5a422d] mx-auto mb-2 opacity-50" />
-                  <h3 className="text-sm font-cinematic font-bold text-[#1a1714]">
-                    NO ACTIVE CASEWORK DOCKETS
+                  <CheckCircle className="w-8 h-8 text-[#5a422d] mx-auto mb-2 opacity-60" />
+                  <h3 className="text-base font-cinematic font-black text-[#1a1714] uppercase">
+                    YOUR CASE DESK IS EMPTY
                   </h3>
-                  <p className="text-xs text-[#5a422d] typewriter-text mt-1">
-                    Your desk is clear. Commission a new objective above to fuel the investigation with Gold and XP.
+                  <p className="text-xs text-[#5a422d] typewriter-text mt-1 max-w-sm mx-auto mb-4">
+                    Create your first quest to begin earning resources (XP &amp; Gold) and fund your active murder investigation.
                   </p>
+                  <button
+                    onClick={() => setCreateModalOpen(true)}
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-gold to-gold-bright hover:from-gold-bright hover:to-gold text-noir font-cinematic font-black text-xs py-2 px-5 rounded-sm shadow-gold transition active:scale-95 tracking-wider uppercase"
+                  >
+                    <Plus className="w-4 h-4 text-noir stroke-[3]" />
+                    <span>CREATE FIRST QUEST</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -190,13 +197,21 @@ export default function DetectivesDeskPage() {
                   ))}
                 </div>
               ) : (
-                <div className="bg-[#161310] border border-steel/30 rounded p-4 text-center">
-                  <div className="text-xs font-cinematic font-bold text-parchment">
-                    NO FORENSIC EVIDENCE LOGGED YET
+                <div className="bg-[#161310] border border-steel/30 rounded p-6 text-center">
+                  <Search className="w-7 h-7 text-gold/50 mx-auto mb-2" />
+                  <div className="text-xs font-cinematic font-bold text-parchment uppercase">
+                    NO EVIDENCE RECOVERED YET
                   </div>
-                  <p className="text-[10px] typewriter-text text-parchment-dim mt-1 max-w-md mx-auto">
-                    Complete your daily casework dockets to acquire Gold, then enter the 3D Crime Scene to inspect hotspots and unlock critical clues.
+                  <p className="text-[11px] typewriter-text text-parchment-dim mt-1 max-w-sm mx-auto mb-3">
+                    Complete quests and spend Gold to inspect crime scene hotspots and continue the investigation.
                   </p>
+                  <button
+                    onClick={handleOpenInvestigation}
+                    className="inline-flex items-center gap-1.5 bg-crimson hover:bg-crimson-bright text-parchment font-cinematic font-bold text-xs py-1.5 px-4 rounded transition active:scale-95 shadow-crimson uppercase tracking-wider"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    <span>ENTER CRIME SCENE FORENSICS</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -239,7 +254,7 @@ export default function DetectivesDeskPage() {
                   <div className="flex items-center justify-between">
                     <span>Contradictions:</span>
                     <strong className="text-crimson-bright font-cinematic font-bold">
-                      2 DETECTED
+                      {currentCase.connections.filter((c) => c.isDeductionValid).length} DETECTED
                     </strong>
                   </div>
                   <div className="flex items-center justify-between pt-1 border-t border-steel/30">

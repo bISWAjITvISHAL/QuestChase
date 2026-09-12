@@ -78,10 +78,14 @@ export async function GET(request: NextRequest) {
         };
       });
 
-      const updatedActions = baseCase.actions.map((act) => ({
-        ...act,
-        isExecuted: executedActionIds.has(act.id),
-      }));
+      const updatedActions = baseCase.actions.map((act) => {
+        const isExecuted = executedActionIds.has(act.id);
+        return {
+          ...act,
+          isExecuted,
+          findingsReport: isExecuted ? act.findingsReport : undefined,
+        };
+      });
 
       const updatedConnections = (caseConnections || []).map((cn) => ({
         id: cn.id,

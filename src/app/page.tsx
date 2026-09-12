@@ -76,12 +76,11 @@ export default function LandingPage() {
   };
 
   const steps = [
-    { num: '01', title: 'ACCEPT A QUEST', desc: 'Transform real tasks into high-stakes investigative casework' },
-    { num: '02', title: 'COMPLETE THE TASK', desc: 'Get things done in the physical world without distractions' },
-    { num: '03', title: 'EARN XP + GOLD', desc: 'Reap attribute XP, level progress, and hard currency' },
-    { num: '04', title: 'INVESTIGATE', desc: 'Spend gold on crime scenes, digital forensics, and suspect interviews' },
-    { num: '05', title: 'DISCOVER CLUES', desc: 'Unearth physical evidence, alibis, and critical contradictions' },
-    { num: '06', title: 'SOLVE THE CASE', desc: 'Form the final deduction: Who, When, How, and Why Lord Blackwood died' },
+    { num: '01', title: 'CREATE QUEST', desc: 'Turn a real-life goal into a high-stakes investigative quest docket.' },
+    { num: '02', title: 'COMPLETE QUEST', desc: 'Finish the task in the physical world and claim your authoritative reward.' },
+    { num: '03', title: 'EARN XP + GOLD', desc: 'Progress your detective clearance and earn investigation currency.' },
+    { num: '04', title: 'INVESTIGATE', desc: 'Spend Gold to unlock crime scene hotspots, digital evidence, and suspect interviews.' },
+    { num: '05', title: 'SOLVE THE CASE', desc: 'Synthesize evidence on the case board to deduce Who, When, How, and Why.' },
   ];
 
   return (
@@ -147,7 +146,7 @@ export default function LandingPage() {
               onClick={handleBeginInvestigation}
               className="bg-gradient-to-r from-gold to-gold-bright hover:from-gold-bright hover:to-gold text-noir font-cinematic font-bold text-xs py-2 px-4 rounded-sm shadow-gold transition active:scale-95 tracking-wider"
             >
-              Begin Investigation
+              START CASE #001
             </button>
           </div>
         </div>
@@ -172,10 +171,10 @@ export default function LandingPage() {
 
             <div className="space-y-2">
               <p className="text-base sm:text-lg text-parchment font-cinematic font-bold tracking-wide">
-                Complete your tasks. Follow the clues. Solve the case.
+                Your real-world tasks become quests. Completing them earns resources that unlock your investigation.
               </p>
               <p className="text-xs sm:text-sm text-parchment-dim typewriter-text leading-relaxed max-w-xl">
-                Transform your daily productivity into investigative currency. Every completed objective earns XP and Gold to interrogate suspects, analyze crime scenes, and deduce the truth behind Lord Blackwood&apos;s murder.
+                Turn your real-world goals into quests. Complete them. Earn XP and Gold. Spend your rewards to investigate a mystery. Every clue brings you closer to the truth.
               </p>
             </div>
 
@@ -184,7 +183,7 @@ export default function LandingPage() {
                 onClick={handleBeginInvestigation}
                 className="flex items-center gap-2.5 bg-gradient-to-r from-gold to-gold-bright hover:from-gold-bright hover:to-gold text-noir font-cinematic font-black py-3.5 px-7 rounded-sm shadow-gold transition-all duration-300 text-xs sm:text-sm tracking-wider active:scale-95 tactile-btn"
               >
-                <span>START YOUR INVESTIGATION</span>
+                <span>START CASE #001</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -208,8 +207,8 @@ export default function LandingPage() {
                 <div className="text-xs sm:text-sm font-cinematic font-bold text-parchment">4 CORE ATTRIBUTES</div>
               </div>
               <div>
-                <div className="text-[10px] text-parchment-dim typewriter-text uppercase">GAMEPLAY ENGINE</div>
-                <div className="text-xs sm:text-sm font-cinematic font-bold text-amber-400">QUESTS → CLUES</div>
+                <div className="text-[10px] text-parchment-dim typewriter-text uppercase">GAMEPLAY LOOP</div>
+                <div className="text-xs sm:text-sm font-cinematic font-bold text-amber-400">TASKS → GOLD → CLUES</div>
               </div>
             </div>
           </div>
@@ -218,6 +217,19 @@ export default function LandingPage() {
           <div className="lg:col-span-6 relative">
             {/* Main Interactive Floating HUD Card */}
             <div className="relative bg-charcoal/95 backdrop-blur-xl border border-gold/40 rounded-sm p-5 sm:p-6 shadow-dossier z-10">
+              {/* Demonstration Data Label Header */}
+              <div className="flex items-center justify-between mb-3 pb-2 border-b border-steel/30">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-gold animate-pulse" />
+                  <span className="text-[10px] font-cinematic font-bold text-gold tracking-widest uppercase">
+                    CASE DESK PREVIEW • EXAMPLE CASE
+                  </span>
+                </div>
+                <span className="text-[9px] typewriter-text text-parchment-dim uppercase bg-noir/70 border border-steel/30 px-2 py-0.5 rounded">
+                  DEMO DATA
+                </span>
+              </div>
+
               {/* Card Header Status Bar */}
               <div className="flex flex-wrap items-center justify-between gap-3 bg-noir/90 border border-gold/30 rounded-sm p-3 mb-5">
                 {/* Level */}
@@ -331,10 +343,10 @@ export default function LandingPage() {
               2 • THE GAMEPLAY LOOP
             </div>
             <h2 className="text-3xl sm:text-4xl font-cinematic font-black text-parchment">
-              HOW IT WORKS
+              QUESTS → REWARDS → INVESTIGATION → CLUES → DEDUCTION
             </h2>
             <p className="text-xs sm:text-sm text-parchment-dim typewriter-text mt-2">
-              Your real-life productivity is the fuel that powers every forensic discovery, interrogation, and deduction.
+              Your real-world tasks become quests. Completing them earns resources that unlock your investigation.
             </p>
           </div>
 
@@ -557,19 +569,19 @@ export default function LandingPage() {
       <section className="relative z-10 py-20 border-t border-steel/30 text-center">
         <div className="max-w-3xl mx-auto px-4">
           <div className="text-xs font-cinematic font-bold tracking-widest text-gold uppercase mb-2">
-            START YOUR INVESTIGATION
+            YOUR LIFE IS THE GAME
           </div>
           <h2 className="text-3xl sm:text-5xl font-cinematic font-black text-parchment tracking-tight mb-4">
             EVERY DAY LEAVES A CLUE.
           </h2>
-          <p className="text-xs sm:text-sm text-parchment-dim typewriter-text mb-6">
-            Complete your tasks. Follow the clues. Solve the case.
+          <p className="text-xs sm:text-sm text-parchment-dim typewriter-text mb-6 max-w-xl mx-auto">
+            Complete your real-life tasks. Earn investigation gold. Uncover forensic evidence. Solve the Blackwood case.
           </p>
           <button
             onClick={handleBeginInvestigation}
             className="bg-gradient-to-r from-gold to-gold-bright hover:from-gold-bright hover:to-gold text-noir font-cinematic font-black py-4 px-10 rounded-sm shadow-gold transition-all duration-300 text-xs sm:text-sm tracking-widest active:scale-95 tactile-btn"
           >
-            START YOUR INVESTIGATION
+            START CASE #001
           </button>
         </div>
       </section>
@@ -577,8 +589,8 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-steel/20 bg-noir py-8 text-center text-xs text-parchment-dim typewriter-text">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            QUESTCHASE • PRODUCTION-QUALITY GAMIFIED PRODUCTIVITY SYSTEM
+          <div className="font-cinematic tracking-wider text-parchment font-bold">
+            QUESTCHASE • METROPOLITAN INVESTIGATION BUREAU
           </div>
           <div>
             &ldquo;Complete your tasks. Follow the clues. Solve the case.&rdquo;

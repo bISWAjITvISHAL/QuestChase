@@ -117,7 +117,7 @@ export interface InvestigationAction {
   };
   potentialEvidenceLabel?: string;
   yieldsEvidenceId: string;
-  findingsReport: string;
+  findingsReport?: string;
   isExecuted: boolean;
   locationLabel: string;
 }

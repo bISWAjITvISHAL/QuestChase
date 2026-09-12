@@ -21,7 +21,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     // 0. Gating & Clearance Restrictions
     if (caseId === 'case_002') {
       return NextResponse.json(
-        { error: 'Case Dossier Classified: Case #002 (The Syndicate\'s Web) is currently undergoing bureau forensic preparation. Coming soon.' },
+        { error: 'Case Dossier Classified: Case #002 (The Silent Witness) is currently undergoing bureau forensic preparation. Coming soon.' },
         { status: 403 }
       );
     }

@@ -157,7 +157,7 @@ export default function LoginPage() {
           {/* Footer Metadata */}
           <div className="text-[10px] text-parchment-dim typewriter-text border-t border-steel/20 pt-3 flex items-center justify-between">
             <span>SECURE TERMINAL • MIB-77</span>
-            <span className="text-gold font-bold">MILITARY-GRADE ENCRYPTION</span>
+            <span className="text-gold font-bold">SECURE TERMINAL • BUREAU ACCESS</span>
           </div>
         </div>
 
@@ -207,9 +207,12 @@ export default function LoginPage() {
 
               {/* Password / Cipher Key */}
               <div>
-                <label className="block text-[11px] font-cinematic font-bold text-parchment uppercase tracking-wider mb-1.5">
-                  CLEARANCE CIPHER KEY (PASSWORD)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-cinematic font-bold text-parchment uppercase tracking-wider">
+                    CLEARANCE CIPHER (PASSWORD)
+                  </label>
+                  <span className="text-[10px] typewriter-text text-steel">Case desk password</span>
+                </div>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-gold absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
@@ -217,7 +220,7 @@ export default function LoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter clearance cipher..."
+                    placeholder="Enter your case desk password..."
                     className="w-full bg-[#0b0c0e] border border-steel/40 focus:border-gold rounded pl-10 pr-3 py-2.5 text-xs text-parchment font-medium typewriter-text outline-none transition placeholder:text-steel focus:ring-1 focus:ring-gold/30"
                   />
                 </div>

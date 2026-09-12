@@ -31,10 +31,10 @@ interface FinalAccusationModalProps {
 
 const TIMELINE_OPTIONS: Record<string, { id: string; label: string }[]> = {
   case_001: [
-    { id: 'time_2225', label: '22:25 PM (Between Marcus dropping watch at 22:24 in garden and carriage leaving gate at 22:31)' },
-    { id: 'time_2145', label: '21:45 PM (During dinner service in the main dining hall)' },
-    { id: 'time_2330', label: '23:30 PM (When the body was discovered by the night butler)' },
-    { id: 'time_0200', label: '02:00 AM (Late night break-in theory)' },
+    { id: 'time_2225', label: '22:25 (Between Marcus dropping watch at 22:24 in garden and carriage leaving gate at 22:31)' },
+    { id: 'time_2145', label: '21:45 (During dinner service in the main dining hall)' },
+    { id: 'time_2330', label: '23:30 (When the body was discovered by the night butler)' },
+    { id: 'time_0200', label: '02:00 (Late night break-in theory)' },
   ],
 };
 
@@ -62,19 +62,19 @@ export function FinalAccusationModal({
   caseFile,
 }: FinalAccusationModalProps) {
   const router = useRouter();
-  const { submitFinalAccusation } = useGameStore();
+  const { submitFinalAccusation, addToast } = useGameStore();
 
   const timelineChoices = TIMELINE_OPTIONS[caseFile.id] || TIMELINE_OPTIONS.case_001;
   const methodChoices = METHOD_OPTIONS[caseFile.id] || METHOD_OPTIONS.case_001;
   const motiveChoices = MOTIVE_OPTIONS[caseFile.id] || MOTIVE_OPTIONS.case_001;
 
-  const [accusedSuspectId, setAccusedSuspectId] = useState(caseFile.suspects[0]?.id || '');
-  const [timelineTime, setTimelineTime] = useState(timelineChoices[0]?.id || '');
-  const [method, setMethod] = useState(methodChoices[0]?.id || '');
-  const [motive, setMotive] = useState(motiveChoices[0]?.id || '');
+  const [accusedSuspectId, setAccusedSuspectId] = useState('');
+  const [timelineTime, setTimelineTime] = useState('');
+  const [method, setMethod] = useState('');
+  const [motive, setMotive] = useState('');
   const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [result, setResult] = useState<{ isCorrect: boolean; feedback: string } | null>(null);
+  const [result, setResult] = useState<{ isCorrect: boolean; feedback: string; rewardXp?: number; rewardGold?: number; rewardBadge?: string } | null>(null);
 
   // Close on Escape key
   useEffect(() => {
@@ -134,6 +134,16 @@ export function FinalAccusationModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!accusedSuspectId || !timelineTime || !method || !motive) {
+      addToast({
+        type: 'info',
+        title: 'INCOMPLETE DEDUCTION',
+        message: 'All four deduction pillars (WHO, WHEN, HOW, WHY) must be specified before delivering accusation.',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     soundEngine.playTypewriter();
 
@@ -221,13 +231,13 @@ export function FinalAccusationModal({
               {result.isCorrect && (
                 <div className="pt-3 border-t border-emerald-500/30 flex flex-wrap items-center gap-4 text-xs font-cinematic">
                   <span className="flex items-center gap-1.5 text-gold font-bold">
-                    <Sparkles className="w-4 h-4 text-gold-bright" /> +{caseFile.rewardXp} XP EARNED
+                    <Sparkles className="w-4 h-4 text-gold-bright" /> +{result.rewardXp ?? caseFile.rewardXp} XP EARNED
                   </span>
                   <span className="flex items-center gap-1.5 text-gold-bright font-bold">
-                    <Coins className="w-4 h-4" /> +{caseFile.rewardGold} GOLD REWARD
+                    <Coins className="w-4 h-4" /> +{result.rewardGold ?? caseFile.rewardGold} GOLD REWARD
                   </span>
                   <span className="flex items-center gap-1.5 text-parchment">
-                    <Award className="w-4 h-4 text-gold" /> AWARD: {caseFile.rewardBadge}
+                    <Award className="w-4 h-4 text-gold" /> AWARD: {result.rewardBadge ?? caseFile.rewardBadge}
                   </span>
                 </div>
               )}
@@ -314,6 +324,7 @@ export function FinalAccusationModal({
                 onChange={(e) => setTimelineTime(e.target.value)}
                 className="w-full bg-[#18191c] border border-steel/40 focus:border-gold rounded px-3 py-2.5 text-xs text-parchment outline-none typewriter-text"
               >
+                <option value="">-- Select Time of Murder --</option>
                 {timelineChoices.map((opt) => (
                   <option key={opt.id} value={opt.id}>
                     {opt.label}
@@ -333,6 +344,7 @@ export function FinalAccusationModal({
                 onChange={(e) => setMethod(e.target.value)}
                 className="w-full bg-[#18191c] border border-steel/40 focus:border-gold rounded px-3 py-2.5 text-xs text-parchment outline-none typewriter-text"
               >
+                <option value="">-- Select Method &amp; Weapon --</option>
                 {methodChoices.map((opt) => (
                   <option key={opt.id} value={opt.id}>
                     {opt.label}
@@ -352,6 +364,7 @@ export function FinalAccusationModal({
                 onChange={(e) => setMotive(e.target.value)}
                 className="w-full bg-[#18191c] border border-steel/40 focus:border-gold rounded px-3 py-2.5 text-xs text-parchment outline-none typewriter-text"
               >
+                <option value="">-- Select Underlying Motive --</option>
                 {motiveChoices.map((opt) => (
                   <option key={opt.id} value={opt.id}>
                     {opt.label}
@@ -414,6 +427,7 @@ export function FinalAccusationModal({
               loading={isSubmitting}
               loadingText="SUBMITTING TRIBUNAL DEDUCTION..."
               variant="crimson"
+              disabled={!accusedSuspectId || !timelineTime || !method || !motive}
               className="w-full min-h-[48px] text-xs font-cinematic font-bold tracking-widest uppercase flex items-center justify-center gap-2"
             >
               <ShieldAlert className="w-4 h-4 inline mr-1" />

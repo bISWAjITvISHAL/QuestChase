@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/lib/store';
 import { supabaseSignUp, isSupabaseConfigured } from '@/lib/supabase';
-import { Shield, Mail, Lock, ArrowRight, UserCheck, Check, AlertCircle } from 'lucide-react';
+import { Shield, Mail, Lock, ArrowRight, UserCheck, Check, AlertCircle, Fingerprint, Award } from 'lucide-react';
 import { soundEngine } from '@/lib/soundEngine';
 
 export default function RegisterPage() {
@@ -17,6 +17,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [requiresEmailConfirmation, setRequiresEmailConfirmation] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,8 +33,16 @@ export default function RegisterPage() {
     }
 
     try {
-      const { user, error } = await supabaseSignUp(email.trim(), password, name.trim());
+      const { user, session, error } = await supabaseSignUp(email.trim(), password, name.trim());
       if (error) throw error;
+
+      if (user && !session) {
+        setIsRegistered(true);
+        setRequiresEmailConfirmation(true);
+        soundEngine.playStampThud();
+        return;
+      }
+
       if (user) {
         setAuthenticatedUser({ id: user.id, email: user.email, name: name.trim() });
         await initGame();
@@ -44,7 +53,7 @@ export default function RegisterPage() {
 
       setTimeout(() => {
         soundEngine.playPaperRustle();
-        router.push('/desk');
+        router.push('/headquarters');
       }, 700);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Registration failed. Please check your credentials.';
@@ -56,70 +65,97 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-noir flex items-center justify-center p-3 sm:p-6 relative overflow-hidden">
       <div className="absolute inset-0 bg-vignette pointer-events-none z-0" />
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-amber-900/10 rounded-full blur-[160px] pointer-events-none" />
 
-      <div className="relative z-10 max-w-xl w-full bg-[#f4ede1] text-[#1a1714] p-6 sm:p-10 rounded-sm shadow-2xl border-4 border-[#2b2219]">
+      <div className="relative z-10 max-w-xl w-full bg-[#121316] text-parchment p-6 sm:p-10 rounded shadow-2xl border-2 border-gold/40">
         {/* Header */}
-        <div className="text-center border-b-2 border-t-2 border-[#2b2219] py-3 mb-6">
-          <div className="w-12 h-12 mx-auto mb-2 bg-[#2b2219] rounded-full flex items-center justify-center text-gold shadow">
-            <Shield className="w-6 h-6 text-gold" />
+        <div className="text-center border-b border-steel/30 pb-5 mb-6">
+          <div className="w-14 h-14 mx-auto mb-3 bg-[#1c1d22] border-2 border-gold/60 rounded-full flex items-center justify-center text-gold shadow-gold">
+            <Shield className="w-7 h-7 text-gold" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-cinematic font-black text-[#1a1714] tracking-wider uppercase">
-            ESTABLISH DETECTIVE PROFILE
+          <div className="text-[10px] font-cinematic font-bold tracking-widest text-crimson-bright uppercase mb-1">
+            COMMISSION DOCKET • FORM QC-01
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-cinematic font-black text-parchment tracking-wider uppercase">
+            COMMISSION OPERATIVE
           </h1>
-          <div className="text-[10px] typewriter-text text-[#5a422d] uppercase tracking-widest mt-0.5">
-            QUESTCHASE BUREAU • COMMISSION DOCKET
-          </div>
+          <p className="text-xs typewriter-text text-parchment-dim mt-1 max-w-md mx-auto">
+            Establish your official QuestChase Bureau service dossier. Earn rank, investigate crime scenes, and deduce the truth.
+          </p>
         </div>
 
         {/* Error Feedback */}
         {errorMessage && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-500 rounded text-red-800 text-xs typewriter-text flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+          <div className="mb-4 p-3 bg-crimson/20 border border-crimson rounded text-red-200 text-xs typewriter-text flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-crimson-bright shrink-0" />
             <span>{errorMessage}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {requiresEmailConfirmation ? (
+          <div className="space-y-5 text-center py-4">
+            <div className="w-12 h-12 mx-auto rounded-full bg-gold/10 border border-gold/40 flex items-center justify-center text-gold">
+              <Mail className="w-6 h-6 text-gold animate-bounce" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-lg font-cinematic font-bold text-parchment uppercase tracking-wide">
+                DISPATCH TRANSMITTED TO YOUR INBOX
+              </h2>
+              <p className="text-xs text-parchment-dim typewriter-text max-w-md mx-auto">
+                A verification dispatch has been sent to <span className="text-gold font-bold">{email}</span>.
+                Please verify your email to activate your clearance badge, then proceed to the bureau login desk.
+              </p>
+            </div>
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded bg-gradient-to-r from-gold to-gold-bright text-noir font-cinematic font-bold text-xs uppercase tracking-wider hover:opacity-95 transition"
+            >
+              <span>PROCEED TO CASE DESK LOGIN</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-cinematic font-bold text-[#2b2219] uppercase tracking-wider mb-1">
-              DETECTIVE / OPERATIVE NAME
+            <label className="block text-xs font-cinematic font-bold text-parchment uppercase tracking-wider mb-1.5">
+              DETECTIVE / OPERATIVE NAME *
             </label>
             <div className="relative">
-              <UserCheck className="w-4 h-4 text-[#8c7355] absolute left-3 top-1/2 -translate-y-1/2" />
+              <UserCheck className="w-4 h-4 text-gold absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Inspector Alex Thorne"
-                className="w-full bg-[#eae0cf] border-2 border-[#8c7355] focus:border-[#2b2219] rounded-sm pl-10 pr-3 py-2.5 text-xs text-[#1a1714] font-bold typewriter-text outline-none transition placeholder:text-[#8c7355]"
+                className="w-full bg-[#0b0c0e] border border-steel/40 focus:border-gold rounded pl-10 pr-3 py-2.5 text-xs text-parchment font-medium typewriter-text outline-none transition placeholder:text-steel focus:ring-1 focus:ring-gold/30"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-cinematic font-bold text-[#2b2219] uppercase tracking-wider mb-1">
-              OFFICIAL BUREAU EMAIL
+            <label className="block text-xs font-cinematic font-bold text-parchment uppercase tracking-wider mb-1.5">
+              OFFICIAL BUREAU EMAIL *
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-[#8c7355] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Mail className="w-4 h-4 text-gold absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="detective@questchase.agency"
-                className="w-full bg-[#eae0cf] border-2 border-[#8c7355] focus:border-[#2b2219] rounded-sm pl-10 pr-3 py-2.5 text-xs text-[#1a1714] font-bold typewriter-text outline-none transition placeholder:text-[#8c7355]"
+                className="w-full bg-[#0b0c0e] border border-steel/40 focus:border-gold rounded pl-10 pr-3 py-2.5 text-xs text-parchment font-medium typewriter-text outline-none transition placeholder:text-steel focus:ring-1 focus:ring-gold/30"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-cinematic font-bold text-[#2b2219] uppercase tracking-wider mb-1">
-              CLEARANCE CIPHER KEY (PASSWORD)
+            <label className="block text-xs font-cinematic font-bold text-parchment uppercase tracking-wider mb-1.5">
+              CLEARANCE CIPHER KEY (PASSWORD) *
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-[#8c7355] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Lock className="w-4 h-4 text-gold absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="password"
                 required
@@ -127,8 +163,34 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Minimum 6 characters..."
-                className="w-full bg-[#eae0cf] border-2 border-[#8c7355] focus:border-[#2b2219] rounded-sm pl-10 pr-3 py-2.5 text-xs text-[#1a1714] font-bold typewriter-text outline-none transition placeholder:text-[#8c7355]"
+                className="w-full bg-[#0b0c0e] border border-steel/40 focus:border-gold rounded pl-10 pr-3 py-2.5 text-xs text-parchment font-medium typewriter-text outline-none transition placeholder:text-steel focus:ring-1 focus:ring-gold/30"
               />
+            </div>
+          </div>
+
+          {/* Core Attribute Preview */}
+          <div className="bg-[#18191c] border border-steel/30 rounded p-3 text-[10px] typewriter-text">
+            <div className="text-gold font-cinematic font-bold tracking-wider uppercase mb-1 flex items-center gap-1.5">
+              <Award className="w-3.5 h-3.5 text-gold" />
+              <span>INITIAL COMMENCEMENT ATTRIBUTES:</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center pt-1">
+              <div className="bg-[#0b0c0e] p-1.5 rounded border border-steel/20">
+                <span className="text-steel">INTELLIGENCE</span>
+                <div className="text-parchment font-bold text-xs">LVL 1</div>
+              </div>
+              <div className="bg-[#0b0c0e] p-1.5 rounded border border-steel/20">
+                <span className="text-steel">PERCEPTION</span>
+                <div className="text-parchment font-bold text-xs">LVL 1</div>
+              </div>
+              <div className="bg-[#0b0c0e] p-1.5 rounded border border-steel/20">
+                <span className="text-steel">DISCIPLINE</span>
+                <div className="text-parchment font-bold text-xs">LVL 1</div>
+              </div>
+              <div className="bg-[#0b0c0e] p-1.5 rounded border border-steel/20">
+                <span className="text-steel">RESILIENCE</span>
+                <div className="text-parchment font-bold text-xs">LVL 1</div>
+              </div>
             </div>
           </div>
 
@@ -136,33 +198,34 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isRegistering || isRegistered}
-              className={`w-full py-3.5 px-6 rounded border-2 border-[#3d4f3b] bg-gradient-to-r from-[#203a27] via-[#2c4e36] to-[#203a27] hover:from-[#2a4d33] hover:to-[#2a4d33] text-[#f4ede1] font-cinematic font-black tracking-widest text-sm shadow-md transition-all duration-300 active:scale-95 flex items-center justify-center gap-2 uppercase ${
+              className={`w-full py-3.5 px-6 rounded bg-gradient-to-r from-gold via-gold-bright to-gold hover:opacity-95 text-noir font-cinematic font-black tracking-widest text-xs shadow-gold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 uppercase tactile-btn ${
                 isRegistering ? 'animate-pulse opacity-90' : ''
               }`}
             >
               {isRegistered ? (
                 <>
-                  <Check className="w-5 h-5 text-gold-bright" />
+                  <Check className="w-4 h-4 text-noir stroke-[3]" />
                   <span>COMMISSION APPROVED</span>
                 </>
               ) : isRegistering ? (
                 <span>COMMISSIONING OPERATIVE...</span>
               ) : (
                 <>
-                  <span>COMMISSION DETECTIVE</span>
-                  <ArrowRight className="w-4 h-4 text-gold" />
+                  <span>RECEIVE BADGE & ENTER BUREAU</span>
+                  <ArrowRight className="w-4 h-4 text-noir" />
                 </>
               )}
             </button>
           </div>
         </form>
+        )}
 
-        <div className="mt-6 pt-4 border-t border-[#8c7355]/40 text-center">
+        <div className="mt-6 pt-4 border-t border-steel/20 text-center">
           <Link
             href="/login"
-            className="text-xs font-cinematic font-bold text-[#2b2219] hover:text-[#7f2525] underline"
+            className="text-xs font-cinematic font-bold text-steel hover:text-gold tracking-wider uppercase transition-colors"
           >
-            ALREADY COMMISSIONED? LOG IN TO BUREAU
+            ALREADY COMMISSIONED? SIGN IN TO CASE DESK →
           </Link>
         </div>
       </div>

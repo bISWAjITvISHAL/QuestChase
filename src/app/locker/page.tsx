@@ -34,9 +34,9 @@ export default function LockerPage() {
 
   const gold = profile.gold || 0;
 
-  const handlePurchase = (itemId: string) => {
+  const handlePurchase = async (itemId: string) => {
     soundEngine.playTypewriter();
-    const success = purchaseEquipment(itemId);
+    const success = await purchaseEquipment(itemId);
     if (!success) {
       setFeedback('INSUFFICIENT GOLD: Complete casework quests to earn Gold.');
       setTimeout(() => setFeedback(null), 4000);

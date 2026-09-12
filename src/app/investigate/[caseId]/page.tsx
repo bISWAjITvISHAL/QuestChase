@@ -43,11 +43,12 @@ export default function InvestigatePage() {
   const handleExecute = async (action: InvestigationAction) => {
     const result = await executeInvestigationAction(currentCase.id, action.id);
     if (result.success) {
+      soundEngine.playClueFound();
       setFeedbackMessage({ type: 'success', text: result.message });
       setSelectedAction({ ...action, isExecuted: true });
 
       // Find the unlocked evidence item and show the cinematic clue reveal modal
-      const ev = currentCase.evidence.find((e) => e.id === action.yieldsEvidenceId);
+      const ev = result.evidence || currentCase.evidence.find((e) => e.id === action.yieldsEvidenceId);
       if (ev) {
         setRevealedEvidence(ev);
       }
@@ -55,6 +56,43 @@ export default function InvestigatePage() {
       setFeedbackMessage({ type: 'error', text: result.message });
     }
   };
+
+  if (caseId === 'case_002') {
+    return (
+      <GameShell>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+          <div className="max-w-lg bg-[#111215] border border-steel/40 p-8 rounded shadow-2xl relative">
+            <div className="text-[10px] font-cinematic font-bold tracking-widest text-gold uppercase mb-2">
+              METROPOLITAN INVESTIGATION BUREAU • ARCHIVES
+            </div>
+            <h1 className="text-2xl font-cinematic font-black text-parchment tracking-wide mb-2">
+              CASE #002: THE SYNDICATE&apos;S WEB
+            </h1>
+            <div className="inline-block bg-noir border border-steel/50 px-3 py-1 text-xs text-steel font-cinematic font-bold tracking-wider uppercase mb-4">
+              CLASSIFIED DOSSIER UNDER BUREAU PREPARATION
+            </div>
+            <p className="text-xs text-parchment-dim typewriter-text leading-relaxed mb-6">
+              Forensic field teams are currently cataloging evidence and cipher logs for Zenith Gallery &amp; High Vault. This case file will be declassified in an upcoming bureau expansion. Complete Case #001 (The Blackwood Murder) to maintain top investigative standing.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                onClick={() => router.push('/headquarters')}
+                className="w-full sm:w-auto bg-gradient-to-r from-gold via-gold-bright to-gold text-noir font-cinematic font-bold text-xs py-2.5 px-6 rounded shadow-gold transition active:scale-95 uppercase tracking-wider"
+              >
+                Return to Detective&apos;s Desk
+              </button>
+              <button
+                onClick={() => router.push('/investigate/case_001')}
+                className="w-full sm:w-auto bg-[#1a1c22] hover:bg-[#252830] text-parchment border border-steel/40 font-cinematic font-bold text-xs py-2.5 px-6 rounded transition active:scale-95 uppercase tracking-wider"
+              >
+                Access Case #001 Scene
+              </button>
+            </div>
+          </div>
+        </div>
+      </GameShell>
+    );
+  }
 
   return (
     <GameShell>
@@ -275,16 +313,28 @@ export default function InvestigatePage() {
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                soundEngine.playStampThud();
-                setRevealedEvidence(null);
-              }}
-              className="w-full bg-gradient-to-r from-gold to-gold-bright hover:from-gold-bright hover:to-gold text-noir font-cinematic font-black text-xs py-3 rounded-sm shadow-gold transition active:scale-95 uppercase tracking-wider flex items-center justify-center gap-2"
-            >
-              <span>ADD TO CASE BOARD</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => {
+                  soundEngine.playStampThud();
+                  setRevealedEvidence(null);
+                  router.push(`/board/${currentCase.id}`);
+                }}
+                className="flex-1 bg-gradient-to-r from-gold to-gold-bright hover:from-gold-bright hover:to-gold text-noir font-cinematic font-black text-xs py-3 rounded-sm shadow-gold transition active:scale-95 uppercase tracking-wider flex items-center justify-center gap-2 tactile-btn"
+              >
+                <span>PIN & VIEW ON BOARD</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  soundEngine.playStampThud();
+                  setRevealedEvidence(null);
+                }}
+                className="bg-charcoal hover:bg-noir border border-steel/40 text-parchment font-cinematic font-bold text-xs px-4 py-3 rounded-sm transition active:scale-95 uppercase tracking-wider tactile-btn"
+              >
+                CONTINUE SEARCH
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { CaseFile } from '@/lib/types';
 import { useGameStore } from '@/lib/store';
 import {
@@ -13,6 +14,11 @@ import {
   FileCheck,
   Coins,
   Sparkles,
+  Fingerprint,
+  Clock,
+  Skull,
+  HelpCircle,
+  Scale,
 } from 'lucide-react';
 import { soundEngine } from '@/lib/soundEngine';
 
@@ -24,16 +30,10 @@ interface FinalAccusationModalProps {
 
 const TIMELINE_OPTIONS: Record<string, { id: string; label: string }[]> = {
   case_001: [
-    { id: 'time_2225', label: '22:25 PM (Contradicts gatekeeper departure log and broken watch)' },
+    { id: 'time_2225', label: '22:25 PM (Between Marcus dropping watch at 22:24 in garden and carriage leaving gate at 22:31)' },
     { id: 'time_2145', label: '21:45 PM (During dinner service in the main dining hall)' },
     { id: 'time_2330', label: '23:30 PM (When the body was discovered by the night butler)' },
     { id: 'time_0200', label: '02:00 AM (Late night break-in theory)' },
-  ],
-  case_002: [
-    { id: 'time_0245', label: '02:45 AM (During VIP Gala tour in the main atrium)' },
-    { id: 'time_0115', label: '01:15 AM (Before gala doors opened)' },
-    { id: 'time_0330', label: '03:30 AM (After security shift handover)' },
-    { id: 'time_0415', label: '04:15 AM (Dawn vault perimeter inspection)' },
   ],
 };
 
@@ -44,12 +44,6 @@ const METHOD_OPTIONS: Record<string, { id: string; label: string }[]> = {
     { id: 'how_heart_tonic_overdose', label: "Overdose of Dr. Elena’s prescribed heart tonic" },
     { id: 'how_blunt_force_safe', label: 'Blunt trauma from safe door during theft' },
   ],
-  case_002: [
-    { id: 'how_master_keycard_degausser', label: 'Used curator master keycard and magnetic degausser to bypass biometric lock' },
-    { id: 'how_vent_shaft_entry', label: 'Infiltrated via ceiling ventilation shaft' },
-    { id: 'how_glass_cutter', label: 'Cut display case using diamond-tipped glass cutter' },
-    { id: 'how_power_grid_cut', label: 'Triggered emergency blackout via basement circuit breaker' },
-  ],
 };
 
 const MOTIVE_OPTIONS: Record<string, { id: string; label: string }[]> = {
@@ -59,12 +53,6 @@ const MOTIVE_OPTIONS: Record<string, { id: string; label: string }[]> = {
     { id: 'why_concealed_heiress', label: 'Revenge for 22 years of concealed heiress identity' },
     { id: 'why_theft_bearer_bonds', label: 'Opportunistic robbery of safe bearer bonds' },
   ],
-  case_002: [
-    { id: 'why_forgery_offshore_payout', label: 'Swap genuine sapphire for forgery to satisfy offshore collector debt' },
-    { id: 'why_insurance_fraud', label: 'Stage robbery for multi-million insurance claim' },
-    { id: 'why_curator_rivalry', label: 'Frame assistant curator for gallery sabotage' },
-    { id: 'why_art_syndicate_blackmail', label: 'Blackmailed by international art syndicate' },
-  ],
 };
 
 export function FinalAccusationModal({
@@ -72,6 +60,7 @@ export function FinalAccusationModal({
   onClose,
   caseFile,
 }: FinalAccusationModalProps) {
+  const router = useRouter();
   const { submitFinalAccusation } = useGameStore();
 
   const timelineChoices = TIMELINE_OPTIONS[caseFile.id] || TIMELINE_OPTIONS.case_001;
@@ -83,9 +72,44 @@ export function FinalAccusationModal({
   const [method, setMethod] = useState(methodChoices[0]?.id || '');
   const [motive, setMotive] = useState(motiveChoices[0]?.id || '');
   const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<{ isCorrect: boolean; feedback: string } | null>(null);
 
   if (!isOpen) return null;
+
+  if (caseFile.id === 'case_002') {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#070809]/90 backdrop-blur-md p-3 sm:p-5 animate-in fade-in duration-200">
+        <div className="relative max-w-md w-full bg-[#121316] border-2 border-gold/40 rounded p-6 shadow-dossier text-center">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-steel hover:text-parchment p-1.5 transition rounded hover:bg-charcoal"
+            aria-label="Close Accusation Modal"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="text-[10px] font-cinematic font-bold text-gold uppercase tracking-widest mb-2">
+            METROPOLITAN INVESTIGATION BUREAU • ARCHIVES
+          </div>
+          <h2 className="text-xl font-cinematic font-black text-parchment mb-2">
+            CASE #002: THE SILENT WITNESS
+          </h2>
+          <div className="inline-block bg-noir border border-steel/50 px-3 py-1 text-xs text-steel font-cinematic font-bold tracking-wider uppercase mb-4">
+            CLASSIFIED DOSSIER • COMING SOON
+          </div>
+          <p className="text-xs text-parchment-dim typewriter-text leading-relaxed mb-6">
+            This case file is currently undergoing forensic preparation and is not available for final deduction. Please complete Case #001.
+          </p>
+          <button
+            onClick={onClose}
+            className="bg-gradient-to-r from-gold via-gold-bright to-gold text-noir font-cinematic font-bold text-xs py-2 px-6 rounded shadow-gold uppercase tracking-wider"
+          >
+            Close Dossier
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const discoveredEvidence = caseFile.evidence.filter((e) => e.isDiscovered);
 
@@ -98,76 +122,100 @@ export function FinalAccusationModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     soundEngine.playTypewriter();
 
-    const outcome = await submitFinalAccusation(
-      caseFile.id,
-      accusedSuspectId,
-      timelineTime,
-      method,
-      motive,
-      selectedEvidenceIds
-    );
-    setResult(outcome);
+    try {
+      const outcome = await submitFinalAccusation(
+        caseFile.id,
+        accusedSuspectId,
+        timelineTime,
+        method,
+        motive,
+        selectedEvidenceIds
+      );
+      if (outcome.isCorrect) {
+        soundEngine.playStampThud();
+      }
+      setResult(outcome);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-noir/85 backdrop-blur-lg p-3 sm:p-4 animate-in fade-in duration-200">
-      <div className="relative max-w-2xl w-full bg-charcoal border-2 border-crimson rounded-sm p-5 sm:p-7 shadow-dossier max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#070809]/90 backdrop-blur-md p-3 sm:p-5 animate-in fade-in duration-200">
+      <div className="relative max-w-2xl w-full bg-[#121316] border-2 border-gold/40 rounded p-5 sm:p-7 shadow-dossier max-h-[92vh] overflow-y-auto">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-steel hover:text-parchment p-1 transition"
+          className="absolute top-4 right-4 text-steel hover:text-parchment p-1.5 transition rounded hover:bg-charcoal"
+          aria-label="Close Accusation Modal"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="mb-5">
-          <div className="flex items-center gap-2 text-[10px] font-cinematic font-bold tracking-widest text-crimson-bright uppercase">
-            <ShieldAlert className="w-4 h-4" />
-            <span>FINAL DEDUCTION • {caseFile.code}</span>
+        {/* Modal Header */}
+        <div className="mb-6 border-b border-steel/20 pb-4">
+          <div className="flex items-center gap-2 text-[10px] font-cinematic font-bold tracking-widest text-crimson-bright uppercase mb-1">
+            <Scale className="w-4 h-4" />
+            <span>CRIMINOLOGY TRIBUNAL • {caseFile.code}</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-cinematic font-black text-parchment tracking-wide">
-            SOLVE THE CASE
+            DELIVER FINAL ACCUSATION
           </h2>
-          <p className="text-xs text-parchment-dim typewriter-text mt-1">
-            Reconcile all discovered evidence threads. Form the four canonical pillars of deduction: <strong>WHO</strong>, <strong>WHEN</strong>, <strong>HOW</strong>, and <strong>WHY</strong>.
+          <p className="text-xs text-parchment-dim typewriter-text mt-1 max-w-xl">
+            Synthesize your investigative findings into four incontrovertible pillars: <strong>WHO</strong>, <strong>WHEN</strong>, <strong>HOW</strong>, and <strong>WHY</strong>.
           </p>
         </div>
 
         {result ? (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div
-              className={`p-5 rounded-sm border ${
+              className={`p-6 rounded border-2 shadow-dossier relative overflow-hidden ${
                 result.isCorrect
-                  ? 'bg-emerald-950/50 border-emerald-500 text-emerald-200'
-                  : 'bg-crimson/25 border-crimson text-red-200'
+                  ? 'bg-emerald-950/40 border-emerald-500/70 text-emerald-100'
+                  : 'bg-crimson/20 border-crimson text-red-100'
               }`}
             >
-              <div className="flex items-center gap-2 font-cinematic font-black text-lg mb-2">
+              {/* Bureau Stamp */}
+              <div
+                className={`absolute top-4 right-4 text-[10px] font-cinematic font-bold px-2 py-0.5 border rotate-6 uppercase opacity-80 ${
+                  result.isCorrect
+                    ? 'border-emerald-400 text-emerald-300'
+                    : 'border-crimson-bright text-crimson-bright'
+                }`}
+              >
+                {result.isCorrect ? 'CASE SOLVED' : 'VERDICT REJECTED'}
+              </div>
+
+              <div className="flex items-center gap-2.5 font-cinematic font-black text-lg sm:text-xl mb-3">
                 {result.isCorrect ? (
                   <>
-                    <CheckCircle className="w-6 h-6 text-emerald-400" />
-                    <span>DEDUCTION CONFIRMED • CASE SOLVED</span>
+                    <CheckCircle className="w-6 h-6 text-emerald-400 shrink-0" />
+                    <span>DEDUCTION CONFIRMED • CASE CLOSED</span>
                   </>
                 ) : (
                   <>
-                    <AlertCircle className="w-6 h-6 text-crimson" />
-                    <span>DEDUCTION FAILED • INCONCLUSIVE CASEWORK</span>
+                    <AlertCircle className="w-6 h-6 text-crimson-bright shrink-0" />
+                    <span>DEDUCTION FAILED • INSUFFICIENT PROOF</span>
                   </>
                 )}
               </div>
-              <p className="text-xs typewriter-text leading-relaxed">{result.feedback}</p>
+
+              <p className="text-xs typewriter-text leading-relaxed bg-noir/50 p-3 rounded border border-steel/20 mb-4">
+                {result.feedback}
+              </p>
 
               {result.isCorrect && (
-                <div className="mt-4 pt-4 border-t border-emerald-500/30 flex flex-wrap items-center gap-4 text-xs font-cinematic">
-                  <span className="flex items-center gap-1 text-gold">
-                    <Sparkles className="w-4 h-4" /> +{caseFile.rewardXp} XP
+                <div className="pt-3 border-t border-emerald-500/30 flex flex-wrap items-center gap-4 text-xs font-cinematic">
+                  <span className="flex items-center gap-1.5 text-gold font-bold">
+                    <Sparkles className="w-4 h-4 text-gold-bright" /> +{caseFile.rewardXp} XP EARNED
                   </span>
-                  <span className="flex items-center gap-1 text-gold-bright font-bold">
-                    <Coins className="w-4 h-4" /> +{caseFile.rewardGold} GOLD
+                  <span className="flex items-center gap-1.5 text-gold-bright font-bold">
+                    <Coins className="w-4 h-4" /> +{caseFile.rewardGold} GOLD REWARD
                   </span>
-                  <span className="flex items-center gap-1 text-parchment">
-                    <Award className="w-4 h-4 text-gold" /> BADGE: {caseFile.rewardBadge}
+                  <span className="flex items-center gap-1.5 text-parchment">
+                    <Award className="w-4 h-4 text-gold" /> AWARD: {caseFile.rewardBadge}
                   </span>
                 </div>
               )}
@@ -175,8 +223,11 @@ export function FinalAccusationModal({
 
             {result.isCorrect ? (
               <button
-                onClick={onClose}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-gold to-gold-bright text-noir font-cinematic font-bold py-3.5 rounded-sm shadow-gold text-xs tracking-widest uppercase"
+                onClick={() => {
+                  onClose();
+                  router.push('/headquarters');
+                }}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-gold via-gold-bright to-gold text-noir font-cinematic font-bold py-3.5 rounded shadow-gold text-xs tracking-widest uppercase transition tactile-btn"
               >
                 <span>RETURN TO DETECTIVE'S DESK</span>
                 <ArrowRight className="w-4 h-4" />
@@ -184,9 +235,9 @@ export function FinalAccusationModal({
             ) : (
               <button
                 onClick={() => setResult(null)}
-                className="w-full flex items-center justify-center gap-2 bg-charcoal hover:bg-noir border border-steel/40 text-parchment font-cinematic font-bold py-2.5 rounded-sm text-xs"
+                className="w-full flex items-center justify-center gap-2 bg-charcoal hover:bg-noir border border-steel/40 text-parchment font-cinematic font-bold py-3 rounded text-xs transition tactile-btn"
               >
-                <span>REVIEW THE CASE & TRY AGAIN</span>
+                <span>RE-EXAMINE THE CASE EVIDENCE & RETRY</span>
               </button>
             )}
           </div>
@@ -194,41 +245,60 @@ export function FinalAccusationModal({
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* 1. WHO */}
             <div>
-              <label className="block text-xs font-cinematic font-bold text-parchment-dim uppercase tracking-wider mb-1.5">
-                1. WHO IS THE PERPETRATOR? (CULPRIT) *
+              <label className="block text-xs font-cinematic font-bold text-parchment uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Fingerprint className="w-3.5 h-3.5 text-crimson-bright" />
+                <span>1. WHO IS THE PERPETRATOR? (CULPRIT) *</span>
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {caseFile.suspects.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setAccusedSuspectId(s.id)}
-                    className={`p-3 text-left rounded border transition ${
-                      accusedSuspectId === s.id
-                        ? 'bg-crimson/25 border-crimson text-parchment shadow-crimson ring-1 ring-red-400'
-                        : 'bg-noir border-steel/30 text-parchment-dim hover:text-parchment'
-                    }`}
-                  >
-                    <div className="text-xs font-cinematic font-bold text-parchment">
-                      {s.name}
-                    </div>
-                    <div className="text-[10px] text-parchment-dim typewriter-text mt-0.5">
-                      {s.role}
-                    </div>
-                  </button>
-                ))}
+                {caseFile.suspects.map((s) => {
+                  const isSelected = accusedSuspectId === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => {
+                        soundEngine.playPaperRustle();
+                        setAccusedSuspectId(s.id);
+                      }}
+                      className={`p-3 text-left rounded border transition tactile-card ${
+                        isSelected
+                          ? 'bg-crimson/25 border-crimson text-parchment shadow-crimson ring-1 ring-red-400'
+                          : 'bg-[#18191c] border-steel/30 text-parchment-dim hover:text-parchment hover:border-steel/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-6 h-6 rounded-full flex items-center justify-center font-cinematic font-bold text-xs ${
+                            isSelected ? 'bg-crimson text-parchment' : 'bg-noir text-gold'
+                          }`}
+                        >
+                          {s.name.charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-cinematic font-bold text-parchment truncate">
+                            {s.name}
+                          </div>
+                          <div className="text-[10px] text-steel typewriter-text truncate">
+                            {s.role}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             {/* 2. WHEN */}
             <div>
-              <label className="block text-xs font-cinematic font-bold text-parchment-dim uppercase tracking-wider mb-1.5">
-                2. WHEN DID THE CRIME OCCUR? (TIMELINE) *
+              <label className="block text-xs font-cinematic font-bold text-parchment uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-gold" />
+                <span>2. WHEN DID THE CRIME OCCUR? (TIMELINE) *</span>
               </label>
               <select
                 value={timelineTime}
                 onChange={(e) => setTimelineTime(e.target.value)}
-                className="w-full bg-noir border border-steel/40 focus:border-gold rounded-sm px-3 py-2 text-xs text-parchment outline-none typewriter-text"
+                className="w-full bg-[#18191c] border border-steel/40 focus:border-gold rounded px-3 py-2.5 text-xs text-parchment outline-none typewriter-text"
               >
                 {timelineChoices.map((opt) => (
                   <option key={opt.id} value={opt.id}>
@@ -240,13 +310,14 @@ export function FinalAccusationModal({
 
             {/* 3. HOW */}
             <div>
-              <label className="block text-xs font-cinematic font-bold text-parchment-dim uppercase tracking-wider mb-1.5">
-                3. HOW WAS THE MURDER COMMITTED? (METHOD & WEAPON) *
+              <label className="block text-xs font-cinematic font-bold text-parchment uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Skull className="w-3.5 h-3.5 text-crimson-bright" />
+                <span>3. HOW WAS THE MURDER COMMITTED? (METHOD & WEAPON) *</span>
               </label>
               <select
                 value={method}
                 onChange={(e) => setMethod(e.target.value)}
-                className="w-full bg-noir border border-steel/40 focus:border-gold rounded-sm px-3 py-2 text-xs text-parchment outline-none typewriter-text"
+                className="w-full bg-[#18191c] border border-steel/40 focus:border-gold rounded px-3 py-2.5 text-xs text-parchment outline-none typewriter-text"
               >
                 {methodChoices.map((opt) => (
                   <option key={opt.id} value={opt.id}>
@@ -258,13 +329,14 @@ export function FinalAccusationModal({
 
             {/* 4. WHY */}
             <div>
-              <label className="block text-xs font-cinematic font-bold text-parchment-dim uppercase tracking-wider mb-1.5">
-                4. WHAT WAS THE MOTIVE? (WHY) *
+              <label className="block text-xs font-cinematic font-bold text-parchment uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <HelpCircle className="w-3.5 h-3.5 text-gold" />
+                <span>4. WHAT WAS THE MOTIVE? (WHY) *</span>
               </label>
               <select
                 value={motive}
                 onChange={(e) => setMotive(e.target.value)}
-                className="w-full bg-noir border border-steel/40 focus:border-gold rounded-sm px-3 py-2 text-xs text-parchment outline-none typewriter-text"
+                className="w-full bg-[#18191c] border border-steel/40 focus:border-gold rounded px-3 py-2.5 text-xs text-parchment outline-none typewriter-text"
               >
                 {motiveChoices.map((opt) => (
                   <option key={opt.id} value={opt.id}>
@@ -274,16 +346,21 @@ export function FinalAccusationModal({
               </select>
             </div>
 
-            {/* 5. SUPPORTING EVIDENCE SELECTION */}
+            {/* 5. SUPPORTING EVIDENCE */}
             <div>
-              <label className="block text-xs font-cinematic font-bold text-parchment-dim uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                <span>5. WHICH DISCOVERED EVIDENCE SUPPORTS YOUR THEORY?</span>
-                <span className="text-[10px] text-gold">{selectedEvidenceIds.length} SELECTED</span>
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-cinematic font-bold text-parchment uppercase tracking-wider flex items-center gap-1.5">
+                  <FileCheck className="w-3.5 h-3.5 text-gold" />
+                  <span>5. SELECT SUPPORTING EVIDENCE</span>
+                </label>
+                <span className="text-[10px] typewriter-text text-gold font-bold">
+                  {selectedEvidenceIds.length} SELECTED
+                </span>
+              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
                 {discoveredEvidence.length === 0 ? (
-                  <div className="col-span-2 text-center py-4 text-xs typewriter-text text-steel">
+                  <div className="col-span-2 text-center py-4 text-xs typewriter-text text-steel bg-noir/50 rounded border border-steel/20">
                     No clues discovered yet. Conduct casework and investigate crime scenes to unlock evidence.
                   </div>
                 ) : (
@@ -293,18 +370,18 @@ export function FinalAccusationModal({
                       <div
                         key={ev.id}
                         onClick={() => toggleEvidenceSelection(ev.id)}
-                        className={`p-2 rounded border text-xs cursor-pointer flex items-center justify-between transition ${
+                        className={`p-2.5 rounded border text-xs cursor-pointer flex items-center justify-between transition tactile-card ${
                           isSelected
-                            ? 'bg-noir border-gold text-parchment'
-                            : 'bg-noir/50 border-steel/30 text-parchment-dim hover:text-parchment'
+                            ? 'bg-noir border-gold text-parchment shadow-sm ring-1 ring-gold/40'
+                            : 'bg-[#18191c] border-steel/30 text-parchment-dim hover:text-parchment hover:border-steel/60'
                         }`}
                       >
                         <div className="truncate pr-2">
                           <div className="text-[11px] font-cinematic font-bold truncate">{ev.title}</div>
-                          <div className="text-[9px] typewriter-text text-steel truncate">{ev.source}</div>
+                          <div className="text-[9px] typewriter-text text-steel truncate">SRC: {ev.source}</div>
                         </div>
                         <div
-                          className={`w-4 h-4 rounded-sm flex items-center justify-center shrink-0 ${
+                          className={`w-4 h-4 rounded flex items-center justify-center shrink-0 text-[10px] ${
                             isSelected ? 'bg-gold text-noir font-bold' : 'border border-steel/50'
                           }`}
                         >
@@ -317,13 +394,14 @@ export function FinalAccusationModal({
               </div>
             </div>
 
-            {/* Submit Deduction */}
+            {/* Submit Button */}
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-crimson to-crimson-bright hover:from-crimson-bright hover:to-crimson text-parchment font-cinematic font-black py-3.5 rounded-sm shadow-crimson transition tracking-widest text-xs uppercase active:scale-95"
+              disabled={isSubmitting}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-crimson via-crimson-bright to-crimson hover:from-crimson-bright hover:to-crimson text-parchment font-cinematic font-bold py-3.5 rounded shadow-crimson transition tracking-widest text-xs uppercase tactile-btn disabled:opacity-50"
             >
               <ShieldAlert className="w-4 h-4" />
-              <span>SUBMIT FINAL DEDUCTION</span>
+              <span>{isSubmitting ? 'SUBMITTING TRIBUNAL DEDUCTION...' : 'SUBMIT FINAL DEDUCTION'}</span>
             </button>
           </form>
         )}

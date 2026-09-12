@@ -3,6 +3,7 @@ import {
   DetectiveProfile,
   Task,
   CaseFile,
+  EvidenceItem,
   EquipmentItem,
   Achievement,
   AttributeType,
@@ -39,7 +40,9 @@ interface GameState {
   isAuthenticated: boolean;
   userId: string | null;
   isLoading: boolean;
+  isInitialized: boolean;
   errorMessage: string | null;
+  lastPersistedPositions: Record<string, { x: number; y: number }>;
 
   // Actions
   initGame: () => Promise<void>;
@@ -55,7 +58,7 @@ interface GameState {
 
   // Case & Investigation Actions
   setActiveCase: (caseId: string) => void;
-  executeInvestigationAction: (caseId: string, actionId: string) => Promise<{ success: boolean; message: string }>;
+  executeInvestigationAction: (caseId: string, actionId: string) => Promise<{ success: boolean; message: string; evidence?: EvidenceItem | null }>;
   updateEvidenceBoardPosition: (caseId: string, evidenceId: string, x: number, y: number) => void;
   connectEvidence: (caseId: string, fromId: string, toId: string) => Promise<{ success: boolean; isDeduction: boolean; message: string }>;
   removeEvidenceConnection: (caseId: string, connectionId: string) => Promise<void>;
@@ -69,11 +72,14 @@ interface GameState {
   ) => Promise<{ isCorrect: boolean; feedback: string }>;
 
   // Equipment Actions
-  purchaseEquipment: (itemId: string) => boolean;
-  toggleEquipItem: (itemId: string) => void;
+  purchaseEquipment: (itemId: string) => Promise<boolean>;
+  toggleEquipItem: (itemId: string) => Promise<void>;
 
   // Achievements
-  checkAchievements: () => void;
+  checkAchievements: () => Promise<void>;
+
+  // Auth
+  signOut: () => Promise<void>;
 
   // Modal / Cinematic Actions
   closeLevelUpModal: () => void;
@@ -89,12 +95,14 @@ export const useGameStore = create<GameState>((set, get) => ({
   activeCaseId: 'case_001',
   equipment: INITIAL_EQUIPMENT,
   achievements: INITIAL_ACHIEVEMENTS,
+  lastPersistedPositions: {},
   levelUpModalOpen: false,
   levelUpData: null,
   activeStampTaskId: null,
   isAuthenticated: false,
   userId: null,
   isLoading: false,
+  isInitialized: false,
   errorMessage: null,
 
   clearError: () => set({ errorMessage: null }),
@@ -112,11 +120,13 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (user) {
           set({ isAuthenticated: true, userId: user.id });
 
-          // Fetch authoritative profile, tasks, and cases from backend API
-          const [profileRes, tasksRes, casesRes] = await Promise.allSettled([
+          // Fetch authoritative profile, tasks, cases, inventory, and achievements from backend API
+          const [profileRes, tasksRes, casesRes, invRes, achRes] = await Promise.allSettled([
             apiFetch('/api/character'),
             apiFetch('/api/tasks'),
             apiFetch('/api/cases'),
+            apiFetch('/api/inventory'),
+            apiFetch('/api/achievements'),
           ]);
 
           if (profileRes.status === 'fulfilled' && profileRes.value.profile) {
@@ -128,16 +138,83 @@ export const useGameStore = create<GameState>((set, get) => ({
           }
 
           if (casesRes.status === 'fulfilled' && Array.isArray(casesRes.value.cases)) {
-            set({ cases: casesRes.value.cases });
+            const fetchedCases = casesRes.value.cases as CaseFile[];
+            const posMap: Record<string, { x: number; y: number }> = {};
+            fetchedCases.forEach((c) => {
+              c.evidence.forEach((ev) => {
+                if (ev.boardPosition) {
+                  posMap[ev.id] = { ...ev.boardPosition };
+                }
+              });
+            });
+            set({ cases: fetchedCases, lastPersistedPositions: posMap });
+          }
+
+          if (invRes.status === 'fulfilled' && Array.isArray(invRes.value.items)) {
+            const ownedItems = invRes.value.items as Array<{ item_id: string; is_equipped: boolean }>;
+            const ownedMap = new Map<string, { item_id: string; is_equipped: boolean }>(
+              ownedItems.map((it) => [it.item_id, it])
+            );
+            set((state) => ({
+              equipment: state.equipment.map((eq) => {
+                const owned = ownedMap.get(eq.id);
+                if (owned) {
+                  return { ...eq, isUnlocked: true, isEquipped: owned.is_equipped };
+                }
+                return eq;
+              }),
+            }));
+          }
+
+          if (achRes.status === 'fulfilled' && Array.isArray(achRes.value.achievements)) {
+            const unlockedList = achRes.value.achievements as Array<{
+              achievement_id: string;
+              is_unlocked: boolean;
+              progress: number;
+              unlocked_at?: string;
+            }>;
+            const unlockedMap = new Map<
+              string,
+              { achievement_id: string; is_unlocked: boolean; progress: number; unlocked_at?: string }
+            >(unlockedList.map((a) => [a.achievement_id, a]));
+            set((state) => ({
+              achievements: state.achievements.map((ach) => {
+                const unl = unlockedMap.get(ach.id);
+                if (unl && unl.is_unlocked) {
+                  return { ...ach, isUnlocked: true, progress: ach.maxProgress, unlockedAt: unl.unlocked_at };
+                }
+                return ach;
+              }),
+            }));
+          }
+
+          // Phase 18: Detect critical synchronization failures and display error state
+          const failedEndpoints: string[] = [];
+          if (profileRes.status === 'rejected' || (profileRes.status === 'fulfilled' && profileRes.value?.error)) {
+            failedEndpoints.push('Detective Profile');
+          }
+          if (casesRes.status === 'rejected' || (casesRes.status === 'fulfilled' && casesRes.value?.error)) {
+            failedEndpoints.push('Case Files');
+          }
+          if (tasksRes.status === 'rejected' || (tasksRes.status === 'fulfilled' && tasksRes.value?.error)) {
+            failedEndpoints.push('Assigned Quests');
+          }
+
+          if (failedEndpoints.length > 0) {
+            set({
+              errorMessage: `Bureau Connection Warning: Failed to synchronize ${failedEndpoints.join(', ')}. Please verify connection or retry.`,
+            });
           }
         } else {
           set({ isAuthenticated: false, userId: null });
         }
       }
     } catch (err: unknown) {
-      console.warn('Backend initialization note:', err);
+      const msg = err instanceof Error ? err.message : 'Backend connection failed';
+      console.warn('Backend initialization error:', err);
+      set({ errorMessage: `Authentication & Initialization Error: ${msg}` });
     } finally {
-      set({ isLoading: false });
+      set({ isLoading: false, isInitialized: true });
     }
   },
 
@@ -315,6 +392,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       if (response.success) {
         soundEngine.playClueFound();
 
+        const revealedEv = response.evidence;
+
         // Update in-memory state with authoritative server results
         set((state) => {
           const updatedCases = state.cases.map((c) => {
@@ -326,7 +405,13 @@ export const useGameStore = create<GameState>((set, get) => ({
 
             const updatedEvidence = c.evidence.map((ev) =>
               ev.id === action.yieldsEvidenceId
-                ? { ...ev, isDiscovered: true, discoveredAt: new Date().toISOString(), pinnedOnBoard: true }
+                ? {
+                    ...ev,
+                    ...(revealedEv || {}),
+                    isDiscovered: true,
+                    discoveredAt: new Date().toISOString(),
+                    pinnedOnBoard: true,
+                  }
                 : ev
             );
 
@@ -343,11 +428,16 @@ export const useGameStore = create<GameState>((set, get) => ({
             evidenceDiscoveredCount: state.profile.evidenceDiscoveredCount + 1,
           };
 
-          return { cases: updatedCases, profile: updatedProfile };
+          const updatedPositions = {
+            ...state.lastPersistedPositions,
+            ...(revealedEv?.boardPosition ? { [action.yieldsEvidenceId]: revealedEv.boardPosition } : {}),
+          };
+
+          return { cases: updatedCases, profile: updatedProfile, lastPersistedPositions: updatedPositions };
         });
 
         get().checkAchievements();
-        return { success: true, message: response.message };
+        return { success: true, message: response.message, evidence: revealedEv };
       }
 
       return { success: false, message: response.error || 'Investigation failed' };
@@ -371,7 +461,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       return { cases: updatedCases };
     });
 
-    // 2. Debounced sync to database (400ms)
+    // 2. Debounced sync to database (400ms) with rollback on error to lastPersistedPositions
     const debounceKey = `${caseId}_${evidenceId}`;
     if (boardPositionDebounceMap[debounceKey]) {
       clearTimeout(boardPositionDebounceMap[debounceKey]);
@@ -382,9 +472,33 @@ export const useGameStore = create<GameState>((set, get) => ({
       apiFetch(`/api/cases/${caseId}/board-positions`, {
         method: 'POST',
         body: JSON.stringify({ evidenceId, x, y }),
-      }).catch((err) => {
-        console.warn('Board position background sync note:', err);
-      });
+      })
+        .then((res) => {
+          if (res?.success) {
+            set((state) => ({
+              lastPersistedPositions: {
+                ...state.lastPersistedPositions,
+                [evidenceId]: { x, y },
+              },
+            }));
+          }
+        })
+        .catch((err) => {
+          console.warn('Board position background sync failed, rolling back to last persisted DB position:', err);
+          const lastGood = get().lastPersistedPositions[evidenceId];
+          if (lastGood) {
+            set((state) => {
+              const updatedCases = state.cases.map((c) => {
+                if (c.id !== caseId) return c;
+                const updatedEvidence = c.evidence.map((ev) =>
+                  ev.id === evidenceId ? { ...ev, boardPosition: lastGood } : ev
+                );
+                return { ...c, evidence: updatedEvidence };
+              });
+              return { cases: updatedCases };
+            });
+          }
+        });
     }, 400);
   },
 
@@ -498,12 +612,15 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
   },
 
-  purchaseEquipment: (itemId) => {
+  purchaseEquipment: async (itemId) => {
     const { profile, equipment } = get();
     const item = equipment.find((e) => e.id === itemId);
     if (!item || item.isUnlocked) return false;
 
     if (profile.gold < item.costGold) return false;
+
+    const prevEquipment = get().equipment;
+    const prevProfile = get().profile;
 
     soundEngine.playClueFound();
     set((state) => ({
@@ -517,75 +634,122 @@ export const useGameStore = create<GameState>((set, get) => ({
       ),
     }));
 
-    return true;
+    try {
+      const response = await apiFetch('/api/inventory', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'purchase', itemId }),
+      });
+
+      if (response.success) {
+        if (response.gold !== undefined) {
+          set((state) => ({ profile: { ...state.profile, gold: response.gold } }));
+        }
+        return true;
+      } else {
+        set({ equipment: prevEquipment, profile: prevProfile });
+        return false;
+      }
+    } catch {
+      set({ equipment: prevEquipment, profile: prevProfile });
+      return false;
+    }
   },
 
-  toggleEquipItem: (itemId) => {
-    set((state) => {
-      const item = state.equipment.find((e) => e.id === itemId);
-      if (!item || !item.isUnlocked) return state;
+  toggleEquipItem: async (itemId) => {
+    const item = get().equipment.find((e) => e.id === itemId);
+    if (!item || !item.isUnlocked) return;
 
-      const willEquip = !item.isEquipped;
-      const updatedEquipped = willEquip
-        ? [...state.profile.equippedItems, itemId]
-        : state.profile.equippedItems.filter((id) => id !== itemId);
+    const prevEquipment = get().equipment;
+    const prevProfile = get().profile;
+    const willEquip = !item.isEquipped;
+    const updatedEquipped = willEquip
+      ? [...prevProfile.equippedItems, itemId]
+      : prevProfile.equippedItems.filter((id) => id !== itemId);
 
-      return {
-        profile: { ...state.profile, equippedItems: updatedEquipped },
-        equipment: state.equipment.map((e) =>
-          e.id === itemId ? { ...e, isEquipped: willEquip } : e
-        ),
-      };
-    });
+    set((state) => ({
+      profile: { ...state.profile, equippedItems: updatedEquipped },
+      equipment: state.equipment.map((e) =>
+        e.id === itemId ? { ...e, isEquipped: willEquip } : e
+      ),
+    }));
+
+    try {
+      const response = await apiFetch('/api/inventory', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'equip', itemId }),
+      });
+      if (!response.success) {
+        set({ equipment: prevEquipment, profile: prevProfile });
+      }
+    } catch {
+      set({ equipment: prevEquipment, profile: prevProfile });
+    }
   },
 
-  checkAchievements: () => {
-    const { profile, tasks, cases, achievements } = get();
-    const completedTasksCount = tasks.filter((t) => t.isCompleted).length;
-    const discoveredCluesCount = cases.reduce(
-      (acc, c) => acc + c.evidence.filter((e) => e.isDiscovered).length,
-      0
-    );
-    const solvedCasesCount = cases.filter((c) => c.status === 'SOLVED').length;
+  checkAchievements: async () => {
+    try {
+      const res = await apiFetch('/api/achievements', {
+        method: 'POST',
+      });
 
-    let newlyUnlocked = false;
+      if (res.success && Array.isArray(res.achievements)) {
+        const unlockedList = res.achievements as Array<{
+          achievement_id: string;
+          is_unlocked: boolean;
+          progress: number;
+          unlocked_at?: string;
+        }>;
+        const unlockedMap = new Map<
+          string,
+          { achievement_id: string; is_unlocked: boolean; progress: number; unlocked_at?: string }
+        >(unlockedList.map((a) => [a.achievement_id, a]));
 
-    const updated = achievements.map((ach) => {
-      if (ach.isUnlocked) return ach;
+        set((state) => ({
+          achievements: state.achievements.map((ach) => {
+            const unl = unlockedMap.get(ach.id);
+            if (unl && unl.is_unlocked) {
+              return { ...ach, isUnlocked: true, progress: ach.maxProgress, unlockedAt: unl.unlocked_at };
+            }
+            return ach;
+          }),
+        }));
 
-      let progress = 0;
-      let shouldUnlock = false;
-
-      if (ach.id === 'ach_first_blood') {
-        progress = completedTasksCount >= 1 ? 1 : 0;
-        shouldUnlock = progress >= 1;
-      } else if (ach.id === 'ach_streak_3') {
-        progress = profile.streak;
-        shouldUnlock = progress >= 3;
-      } else if (ach.id === 'ach_clue_finder') {
-        progress = discoveredCluesCount;
-        shouldUnlock = progress >= 5;
-      } else if (ach.id === 'ach_first_case') {
-        progress = solvedCasesCount;
-        shouldUnlock = progress >= 1;
+        if (Array.isArray(res.newlyUnlocked) && res.newlyUnlocked.length > 0) {
+          soundEngine.playLevelUp();
+          // Refresh profile to reflect any XP/Gold bonuses gained from unlocked achievements
+          const charRes = await apiFetch('/api/character');
+          if (charRes.profile) {
+            set({ profile: charRes.profile });
+          }
+        }
       }
+    } catch (err) {
+      console.warn('Authoritative achievement sync note:', err);
+    }
+  },
 
-      if (shouldUnlock && !ach.isUnlocked) {
-        newlyUnlocked = true;
-        return {
-          ...ach,
-          progress: ach.maxProgress,
-          isUnlocked: true,
-          unlockedAt: new Date().toISOString(),
-        };
+  signOut: async () => {
+    try {
+      if (isSupabaseConfigured && supabase) {
+        await supabase.auth.signOut();
       }
-
-      return { ...ach, progress };
-    });
-
-    if (newlyUnlocked) {
-      soundEngine.playLevelUp();
-      set({ achievements: updated });
+    } catch (err) {
+      console.warn('Sign out note:', err);
+    } finally {
+      set({
+        isAuthenticated: false,
+        userId: null,
+        isInitialized: false,
+        profile: INITIAL_PROFILE,
+        tasks: [],
+        cases: INITIAL_CASES,
+        equipment: INITIAL_EQUIPMENT,
+        achievements: INITIAL_ACHIEVEMENTS,
+        lastPersistedPositions: {},
+      });
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
     }
   },
 

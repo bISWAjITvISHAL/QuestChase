@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/serverAuth';
-import { INITIAL_CASES } from '@/lib/initialData';
+import { validateDeductionServerOnly } from '@/lib/serverCaseSolutions';
 
 interface RouteContext {
   params: { caseId: string };
@@ -20,6 +20,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   try {
     // 0. Enforce Backend Case Access & Lock Restrictions
+    if (caseId === 'case_002') {
+      return NextResponse.json(
+        { error: 'Case Dossier Classified: Case #002 (The Silent Witness) is currently undergoing bureau preparation (Coming Soon) and cannot be deduced.' },
+        { status: 403 }
+      );
+    }
+
     if (caseId !== 'case_001') {
       const { data: c1Progress } = await client
         .from('case_progress')
@@ -39,61 +46,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const body = await request.json();
     const { whoId, whenId, howId, whyId, selectedEvidenceIds } = body;
 
-    const targetCase = INITIAL_CASES.find((c) => c.id === caseId);
-    if (!targetCase) {
-      return NextResponse.json({ error: 'Case not found' }, { status: 404 });
-    }
-
-    const { solution } = targetCase;
-
-    // 1. Strict Deterministic Canonical ID Validation (Server-Authoritative - NO cross-case fallback)
-    if (!solution || !solution.whoId || !solution.whenId || !solution.howId || !solution.whyId) {
-      return NextResponse.json(
-        { error: 'Case deduction configuration incomplete: Canonical solution not established for this dossier.' },
-        { status: 500 }
-      );
-    }
-
-    if (!whoId || !whenId || !howId || !whyId) {
-      return NextResponse.json({
-        isCorrect: false,
-        feedback: 'DEDUCTION INCOMPLETE: All four canonical deduction pillars (WHO, WHEN, HOW, WHY) are required.',
-      });
-    }
-
-    if (whoId !== solution.whoId) {
-      return NextResponse.json({
-        isCorrect: false,
-        feedback:
-          'DEDUCTION FLAW [WHO]: The forensic evidence points toward a different individual with direct access and opportunity.',
-      });
-    }
-
-    if (whenId !== solution.whenId) {
-      return NextResponse.json({
-        isCorrect: false,
-        feedback:
-          'DEDUCTION FLAW [WHEN]: The timeline timestamp contradicts verified logbook records and witness movements.',
-      });
-    }
-
-    if (howId !== solution.howId) {
-      return NextResponse.json({
-        isCorrect: false,
-        feedback:
-          'DEDUCTION FLAW [HOW]: The execution method does not align with physical scene forensics or recovered instruments.',
-      });
-    }
-
-    if (whyId !== solution.whyId) {
-      return NextResponse.json({
-        isCorrect: false,
-        feedback:
-          'DEDUCTION FLAW [WHY]: The established motive fails to explain the documented financial interests or intercepted communications.',
-      });
-    }
-
-    // 2. Strict Evidence Ownership & Discovery Validation
+    // 1. Fetch User Discovered Evidence
     const { data: userEvidence, error: userEvErr } = await client
       .from('discovered_evidence')
       .select('evidence_id')
@@ -107,32 +60,24 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const userDiscoveredSet = new Set((userEvidence || []).map((e) => e.evidence_id));
     const submittedEvidenceList: string[] = Array.isArray(selectedEvidenceIds) ? selectedEvidenceIds : [];
 
-    // Verify submitted evidence IDs belong to user's discovered evidence
-    for (const evId of submittedEvidenceList) {
-      if (!userDiscoveredSet.has(evId)) {
-        return NextResponse.json({
-          isCorrect: false,
-          feedback:
-            'EVIDENCE VERIFICATION REJECTED: One or more submitted evidence threads have not been discovered in your active investigation.',
-        });
-      }
-    }
+    // 2. Server-Authoritative Secret Solution Validation
+    const validation = validateDeductionServerOnly(caseId, {
+      whoId,
+      whenId,
+      howId,
+      whyId,
+      discoveredEvidenceIds: userDiscoveredSet,
+      selectedEvidenceIds: submittedEvidenceList,
+    });
 
-    // Verify ALL mandatory required evidence items are present and discovered
-    const submittedSet = new Set(submittedEvidenceList);
-    const missingRequired = solution.requiredEvidenceIds.filter(
-      (reqId) => !submittedSet.has(reqId) || !userDiscoveredSet.has(reqId)
-    );
-
-    if (missingRequired.length > 0) {
+    if (!validation.isCorrect || !validation.rewards) {
       return NextResponse.json({
         isCorrect: false,
-        feedback: `DEDUCTION INCOMPLETE: You are missing ${missingRequired.length} required piece(s) of supporting forensic evidence (e.g. Broken Watch, Gatekeeper Log, or Cyanide Residue). Conduct further casework and scene forensics.`,
+        feedback: validation.feedback,
       });
     }
 
-    const rewardXp = targetCase.rewardXp || 500;
-    const rewardGold = targetCase.rewardGold || 250;
+    const { xp: rewardXp, gold: rewardGold, badge: rewardBadge } = validation.rewards;
 
     // 3. Pure Atomic PostgreSQL RPC execution (FOR UPDATE row-locked, concurrency-safe, transaction-atomic)
     const { data: rpcData, error: rpcError } = await client.rpc('solve_case_atomic', {
@@ -155,12 +100,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       caseSolved: true,
       rewardXp,
       rewardGold,
-      rewardBadge: targetCase.rewardBadge,
+      rewardBadge,
       profile: rpcData.profile,
       alreadySolved: rpcData.alreadySolved || false,
       feedback: rpcData.alreadySolved
         ? 'CASE ALREADY SOLVED: Case dossier is officially closed and sealed in the Bureau archives.'
-        : `CASE SOLVED: Brilliant deduction, Detective. Marcus Vance has been apprehended at the docklands attempting to board the midnight steamship. His confession matches the cyanide pen delivery and the intercepted codicil. The Blackwood case is officially CLOSED.`,
+        : validation.feedback,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal server error';

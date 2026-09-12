@@ -43,6 +43,10 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       }
       updatePayload.priority = body.priority;
     }
+    if (body.dueDate !== undefined || body.due_date !== undefined) {
+      const val = body.dueDate ?? body.due_date;
+      updatePayload.due_date = val ? new Date(val).toISOString() : null;
+    }
 
     // Explicitly reject tampering with immutable/reward fields
     if (
@@ -81,7 +85,24 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'Quest not found or unauthorized' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, task: updated });
+    const mappedTask = {
+      id: updated.id,
+      userId: updated.user_id,
+      title: updated.title,
+      description: updated.description,
+      category: updated.category,
+      difficulty: updated.difficulty,
+      priority: updated.priority,
+      xpReward: updated.xp_reward,
+      goldReward: updated.gold_reward,
+      attributeRewards: updated.attribute_rewards,
+      isCompleted: updated.is_completed,
+      completedAt: updated.completed_at,
+      createdAt: updated.created_at,
+      dueDate: updated.due_date,
+    };
+
+    return NextResponse.json({ success: true, task: mappedTask });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal server error';
     return NextResponse.json({ error: message }, { status: 500 });

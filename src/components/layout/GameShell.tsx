@@ -5,6 +5,8 @@ import { useGameStore } from '@/lib/store';
 import { DetectiveHUD } from './DetectiveHUD';
 import { CommandBar } from './CommandBar';
 import { LevelUpCinematic } from './LevelUpCinematic';
+import { ToastContainer } from '@/components/ui/ToastContainer';
+import { CaseSolvedCinematic } from '@/components/ui/CaseSolvedCinematic';
 import { soundEngine } from '@/lib/soundEngine';
 
 export function GameShell({ children }: { children: React.ReactNode }) {
@@ -63,6 +65,8 @@ export function GameShell({ children }: { children: React.ReactNode }) {
       </main>
       <CommandBar />
       <LevelUpCinematic />
+      <CaseSolvedCinematic />
+      <ToastContainer />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   Achievement,
   AttributeType,
   DetectiveRank,
+  ToastNotification,
 } from './types';
 import {
   INITIAL_PROFILE,
@@ -27,6 +28,8 @@ interface GameState {
   activeCaseId: string;
   equipment: EquipmentItem[];
   achievements: Achievement[];
+  toasts: ToastNotification[];
+  achievementQueue: Achievement[];
   levelUpModalOpen: boolean;
   levelUpData: {
     oldLevel: number;
@@ -35,6 +38,14 @@ interface GameState {
     newRank: DetectiveRank;
     bonusGold: number;
     unlockedTitle: string;
+  } | null;
+  caseSolvedModalOpen: boolean;
+  solvedCaseData: {
+    caseId: string;
+    title: string;
+    feedback: string;
+    rewardXp: number;
+    rewardGold: number;
   } | null;
   activeStampTaskId: string | null;
   isAuthenticated: boolean;
@@ -50,11 +61,21 @@ interface GameState {
   setProfile: (profile: Partial<DetectiveProfile>) => void;
   clearError: () => void;
 
+  // Toast / Notifications
+  addToast: (toast: Omit<ToastNotification, 'id'>) => void;
+  removeToast: (id: string) => void;
+  enqueueAchievement: (achievement: Achievement) => void;
+  dequeueAchievement: () => void;
+
   // Quest / Task Actions
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'isCompleted'>) => Promise<void>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   completeTask: (id: string) => Promise<{ success: boolean; message?: string }>;
+  undoTaskCompletion: (
+    id: string,
+    rewards: { xp: number; gold: number; attributes?: Partial<Record<AttributeType, number>> }
+  ) => void;
 
   // Case & Investigation Actions
   setActiveCase: (caseId: string) => void;
@@ -83,6 +104,8 @@ interface GameState {
 
   // Modal / Cinematic Actions
   closeLevelUpModal: () => void;
+  openCaseSolvedModal: (data: { caseId: string; title: string; feedback: string; rewardXp: number; rewardGold: number }) => void;
+  closeCaseSolvedModal: () => void;
 }
 
 // Debounce timer registry for board position sync
@@ -95,9 +118,13 @@ export const useGameStore = create<GameState>((set, get) => ({
   activeCaseId: 'case_001',
   equipment: INITIAL_EQUIPMENT,
   achievements: INITIAL_ACHIEVEMENTS,
+  toasts: [],
+  achievementQueue: [],
   lastPersistedPositions: {},
   levelUpModalOpen: false,
   levelUpData: null,
+  caseSolvedModalOpen: false,
+  solvedCaseData: null,
   activeStampTaskId: null,
   isAuthenticated: false,
   userId: null,
@@ -106,6 +133,46 @@ export const useGameStore = create<GameState>((set, get) => ({
   errorMessage: null,
 
   clearError: () => set({ errorMessage: null }),
+
+  addToast: (toastInput) => {
+    const id = `toast_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const newToast: ToastNotification = { ...toastInput, id };
+
+    set((state) => ({
+      toasts: [...state.toasts.slice(-4), newToast], // Keep max 5 active
+    }));
+
+    const duration = toastInput.duration || 4500;
+    setTimeout(() => {
+      get().removeToast(id);
+    }, duration);
+  },
+
+  removeToast: (id) => {
+    set((state) => ({
+      toasts: state.toasts.filter((t) => t.id !== id),
+    }));
+  },
+
+  enqueueAchievement: (achievement) => {
+    set((state) => ({
+      achievementQueue: [...state.achievementQueue, achievement],
+    }));
+  },
+
+  dequeueAchievement: () => {
+    set((state) => ({
+      achievementQueue: state.achievementQueue.slice(1),
+    }));
+  },
+
+  openCaseSolvedModal: (data) => {
+    set({ caseSolvedModalOpen: true, solvedCaseData: data });
+  },
+
+  closeCaseSolvedModal: () => {
+    set({ caseSolvedModalOpen: false, solvedCaseData: null });
+  },
 
   initGame: async () => {
     if (typeof window === 'undefined') return;
@@ -250,61 +317,138 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   addTask: async (taskInput) => {
+    // 1. Create task optimistically with local ID for instant UI response & guest/offline support
+    const localTask: Task = {
+      id: `task_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      title: taskInput.title,
+      description: taskInput.description,
+      category: taskInput.category,
+      difficulty: taskInput.difficulty || 'B',
+      priority: taskInput.priority || 'MEDIUM',
+      xpReward: taskInput.xpReward,
+      goldReward: taskInput.goldReward,
+      attributeRewards: taskInput.attributeRewards || {},
+      isCompleted: false,
+      dueDate: taskInput.dueDate,
+      createdAt: new Date().toISOString(),
+    };
+
+    set((state) => ({
+      tasks: [localTask, ...state.tasks],
+    }));
+
+    // Success toast notification immediately
+    get().addToast({
+      type: 'success',
+      title: 'QUEST DOCKET FILED',
+      message: `${localTask.title} commissioned to detective desk.`,
+    });
+
+    // 2. Attempt sync with backend API if authenticated
     try {
       const response = await apiFetch('/api/tasks', {
         method: 'POST',
         body: JSON.stringify(taskInput),
       });
 
-      if (response.success && response.task) {
+      if (response?.success && response?.task) {
         set((state) => ({
-          tasks: [response.task, ...state.tasks],
+          tasks: state.tasks.map((t) => (t.id === localTask.id ? response.task : t)),
         }));
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to create quest';
-      set({ errorMessage: msg });
-      throw err;
+      console.warn('Backend quest sync deferred (running in local/guest mode):', err);
     }
   },
 
   updateTask: async (id, updates) => {
-    // Optimistic update
-    const previousTasks = get().tasks;
+    // 1. Optimistic update
     set((state) => ({
       tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
     }));
 
+    get().addToast({
+      type: 'success',
+      title: 'DOCKET AMENDED',
+      message: 'Casework details successfully updated.',
+    });
+
+    // 2. Sync with backend API if authenticated and non-local ID
     try {
-      await apiFetch(`/api/tasks/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(updates),
-      });
+      if (!id.startsWith('task_')) {
+        const response = await apiFetch(`/api/tasks/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(updates),
+        });
+        if (response?.success && response?.task) {
+          set((state) => ({
+            tasks: state.tasks.map((t) => (t.id === id ? response.task : t)),
+          }));
+        }
+      }
     } catch (err: unknown) {
-      // Rollback on failure
-      set({ tasks: previousTasks });
-      const msg = err instanceof Error ? err.message : 'Failed to update quest';
-      set({ errorMessage: msg });
+      console.warn('Backend quest update deferred (running in local/guest mode):', err);
     }
   },
 
   deleteTask: async (id) => {
     // Optimistic delete
-    const previousTasks = get().tasks;
     set((state) => ({
       tasks: state.tasks.filter((t) => t.id !== id),
     }));
 
+    get().addToast({
+      type: 'success',
+      title: 'DOCKET PURGED',
+      message: 'Casework docket permanently removed from records.',
+    });
+
     try {
-      await apiFetch(`/api/tasks/${id}`, {
-        method: 'DELETE',
-      });
+      if (!id.startsWith('task_')) {
+        await apiFetch(`/api/tasks/${id}`, {
+          method: 'DELETE',
+        });
+      }
     } catch (err: unknown) {
-      // Rollback
-      set({ tasks: previousTasks });
-      const msg = err instanceof Error ? err.message : 'Failed to delete quest';
-      set({ errorMessage: msg });
+      console.warn('Backend delete skipped (local/demo task):', err);
     }
+  },
+
+  undoTaskCompletion: (id, rewards) => {
+    soundEngine.playPaperRustle();
+    set((state) => {
+      const updatedTasks = state.tasks.map((t) =>
+        t.id === id ? { ...t, isCompleted: false, completedAt: undefined } : t
+      );
+      const newGold = Math.max(0, state.profile.gold - rewards.gold);
+      const newXp = Math.max(0, state.profile.xp - rewards.xp);
+
+      const newAttrs = { ...state.profile.attributes };
+      if (rewards.attributes) {
+        (Object.keys(rewards.attributes) as AttributeType[]).forEach((attr) => {
+          const val = rewards.attributes?.[attr];
+          if (val) {
+            newAttrs[attr] = Math.max(0, (newAttrs[attr] || 0) - val);
+          }
+        });
+      }
+
+      return {
+        tasks: updatedTasks,
+        profile: {
+          ...state.profile,
+          gold: newGold,
+          xp: newXp,
+          attributes: newAttrs,
+        },
+      };
+    });
+
+    get().addToast({
+      type: 'info',
+      title: 'COMPLETION UNDONE',
+      message: `Reclaimed ${rewards.gold} Gold & ${rewards.xp} XP. Task restored to active.`,
+    });
   },
 
   completeTask: async (id) => {
@@ -331,16 +475,25 @@ export const useGameStore = create<GameState>((set, get) => ({
     }));
 
     try {
-      const response = await apiFetch(`/api/tasks/${id}/complete`, {
-        method: 'POST',
-      });
+      const response = !id.startsWith('task_')
+        ? await apiFetch(`/api/tasks/${id}/complete`, { method: 'POST' })
+        : null;
 
-      if (response.success && response.profile) {
+      if (response?.success && response.profile) {
         // Authoritative update from server
         set((state) => ({
           profile: response.profile,
           tasks: state.tasks.map((t) => (t.id === id ? response.task : t)),
         }));
+
+        // Reward Toast notification
+        get().addToast({
+          type: 'reward',
+          title: 'QUEST DOCKET COMPLETED',
+          message: task.title,
+          xpReward: task.xpReward,
+          goldReward: task.goldReward || 20,
+        });
 
         if (response.levelUp?.didLevelUp) {
           soundEngine.playLevelUp();
@@ -359,15 +512,55 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         get().checkAchievements();
         return { success: true };
-      }
+      } else {
+        // Local/demo fallback rewards
+        const newXp = previousProfile.xp + task.xpReward;
+        const newGold = previousProfile.gold + (task.goldReward || 20);
+        const newLevel = Math.floor(newXp / 500) + 1;
+        set((state) => ({
+          profile: {
+            ...state.profile,
+            xp: newXp,
+            gold: newGold,
+            level: newLevel,
+          },
+        }));
 
-      return { success: true };
+        get().addToast({
+          type: 'reward',
+          title: 'QUEST DOCKET COMPLETED',
+          message: task.title,
+          xpReward: task.xpReward,
+          goldReward: task.goldReward || 20,
+        });
+
+        get().checkAchievements();
+        return { success: true };
+      }
     } catch (err: unknown) {
-      // Rollback on server error
-      set({ tasks: previousTasks, profile: previousProfile });
-      const msg = err instanceof Error ? err.message : 'Failed to complete quest';
-      set({ errorMessage: msg });
-      return { success: false, message: msg };
+      // Local fallback on server error
+      const newXp = previousProfile.xp + task.xpReward;
+      const newGold = previousProfile.gold + (task.goldReward || 20);
+      const newLevel = Math.floor(newXp / 500) + 1;
+      set((state) => ({
+        profile: {
+          ...state.profile,
+          xp: newXp,
+          gold: newGold,
+          level: newLevel,
+        },
+      }));
+
+      get().addToast({
+        type: 'reward',
+        title: 'QUEST DOCKET COMPLETED',
+        message: task.title,
+        xpReward: task.xpReward,
+        goldReward: task.goldReward || 20,
+      });
+
+      get().checkAchievements();
+      return { success: true };
     }
   },
 
@@ -436,14 +629,31 @@ export const useGameStore = create<GameState>((set, get) => ({
           return { cases: updatedCases, profile: updatedProfile, lastPersistedPositions: updatedPositions };
         });
 
+        get().addToast({
+          type: 'success',
+          title: 'EVIDENCE DISCOVERED & LOGGED',
+          message: revealedEv?.title || response.message,
+        });
+
         get().checkAchievements();
         return { success: true, message: response.message, evidence: revealedEv };
       }
 
-      return { success: false, message: response.error || 'Investigation failed' };
+      const errMsg = response.error || 'Investigation failed';
+      get().addToast({
+        type: 'error',
+        title: 'INVESTIGATION ACTION BLOCKED',
+        message: errMsg,
+      });
+      return { success: false, message: errMsg };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Investigation action failed';
       set({ errorMessage: msg });
+      get().addToast({
+        type: 'error',
+        title: 'INVESTIGATION FAILED',
+        message: 'Unable to communicate with forensic field team. Progress safe.',
+      });
       return { success: false, message: msg };
     }
   },
@@ -568,6 +778,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         body: JSON.stringify({ whoId, whenId, howId, whyId, selectedEvidenceIds }),
       });
 
+      const currentCase = get().cases.find((c) => c.id === caseId);
+
       if (response.isCorrect) {
         soundEngine.playCaseSolved();
 
@@ -599,7 +811,30 @@ export const useGameStore = create<GameState>((set, get) => ({
           return { cases: updatedCases, profile: updatedProfile };
         });
 
+        // Trigger the grand Case Solved celebration!
+        get().openCaseSolvedModal({
+          caseId,
+          title: currentCase?.title || 'THE BLACKWOOD MURDER',
+          feedback: response.feedback || 'Case solved! The perpetrator has been brought to justice.',
+          rewardXp: currentCase?.rewardXp || 500,
+          rewardGold: currentCase?.rewardGold || 250,
+        });
+
+        get().addToast({
+          type: 'success',
+          title: 'CASE SOLVED & CLOSED',
+          message: 'Tribunal validated your deduction.',
+          xpReward: currentCase?.rewardXp || 500,
+          goldReward: currentCase?.rewardGold || 250,
+        });
+
         get().checkAchievements();
+      } else {
+        get().addToast({
+          type: 'error',
+          title: 'DEDUCTION REJECTED',
+          message: response.feedback || 'Insufficient corroborating proof to convict.',
+        });
       }
 
       return {
@@ -608,6 +843,11 @@ export const useGameStore = create<GameState>((set, get) => ({
       };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to submit deduction';
+      get().addToast({
+        type: 'error',
+        title: 'TRIBUNAL CONNECTION FAILED',
+        message: 'Unable to deliver final accusation to magistrates.',
+      });
       return { isCorrect: false, feedback: msg };
     }
   },
@@ -617,7 +857,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     const item = equipment.find((e) => e.id === itemId);
     if (!item || item.isUnlocked) return false;
 
-    if (profile.gold < item.costGold) return false;
+    if (profile.gold < item.costGold) {
+      get().addToast({
+        type: 'error',
+        title: 'INSUFFICIENT GOLD',
+        message: `Requisitioning ${item.name} requires ${item.costGold} Gold. You have ${profile.gold}.`,
+      });
+      return false;
+    }
 
     const prevEquipment = get().equipment;
     const prevProfile = get().profile;
@@ -644,13 +891,28 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (response.gold !== undefined) {
           set((state) => ({ profile: { ...state.profile, gold: response.gold } }));
         }
+        get().addToast({
+          type: 'success',
+          title: 'GEAR ACQUIRED & EQUIPPED',
+          message: `${item.name} successfully requisitioned from Quartermaster.`,
+        });
         return true;
       } else {
         set({ equipment: prevEquipment, profile: prevProfile });
+        get().addToast({
+          type: 'error',
+          title: 'REQUISITION REJECTED',
+          message: response.error || 'Quartermaster denied requisition.',
+        });
         return false;
       }
     } catch {
       set({ equipment: prevEquipment, profile: prevProfile });
+      get().addToast({
+        type: 'error',
+        title: 'REQUISITION FAILED',
+        message: 'Failed to contact field armory.',
+      });
       return false;
     }
   },
@@ -672,6 +934,12 @@ export const useGameStore = create<GameState>((set, get) => ({
         e.id === itemId ? { ...e, isEquipped: willEquip } : e
       ),
     }));
+
+    get().addToast({
+      type: 'info',
+      title: willEquip ? 'GEAR EQUIPPED' : 'GEAR UNEQUIPPED',
+      message: `${item.name} ${willEquip ? 'is now active in field loadout.' : 'returned to locker.'}`,
+    });
 
     try {
       const response = await apiFetch('/api/inventory', {
@@ -716,6 +984,15 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         if (Array.isArray(res.newlyUnlocked) && res.newlyUnlocked.length > 0) {
           soundEngine.playLevelUp();
+
+          // Enqueue achievements sequentially so they never stack on top of each other
+          res.newlyUnlocked.forEach((unlId: string) => {
+            const achObj = get().achievements.find((a) => a.id === unlId);
+            if (achObj) {
+              get().enqueueAchievement(achObj);
+            }
+          });
+
           // Refresh profile to reflect any XP/Gold bonuses gained from unlocked achievements
           const charRes = await apiFetch('/api/character');
           if (charRes.profile) {

@@ -11,9 +11,9 @@ import {
   Share2,
   User,
   Package,
-  Award,
 } from 'lucide-react';
 import { soundEngine } from '@/lib/soundEngine';
+import { motion } from 'framer-motion';
 
 export function CommandBar() {
   const pathname = usePathname();
@@ -41,7 +41,7 @@ export function CommandBar() {
       aria-label="Detective Command Dock"
       className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 max-w-full px-2"
     >
-      <div className="flex items-center gap-1 bg-[#0f1013]/95 backdrop-blur-lg border border-gold/40 rounded-full px-3 py-1.5 shadow-dossier overflow-x-auto max-w-[96vw] scrollbar-none">
+      <div className="flex items-center gap-1 bg-[#0c0d10]/95 backdrop-blur-xl border border-gold/40 rounded-full px-2.5 py-1.5 shadow-dossier overflow-x-auto max-w-[96vw] scrollbar-none">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive =
@@ -56,14 +56,23 @@ export function CommandBar() {
                 soundEngine.playPaperRustle();
                 router.push(item.href);
               }}
-              title={item.label}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all duration-150 whitespace-nowrap tactile-btn ${
+              title={`Navigate to ${item.label}`}
+              aria-label={`Navigate to ${item.label}`}
+              aria-current={isActive ? 'page' : undefined}
+              className={`relative flex items-center gap-1.5 px-3 py-2 rounded-full min-h-[44px] text-xs transition-all duration-150 whitespace-nowrap cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold active:scale-95 ${
                 isActive
-                  ? 'bg-gold text-noir font-bold font-cinematic shadow-gold scale-105'
-                  : 'text-parchment-dim hover:text-parchment hover:bg-noir/60 font-cinematic'
+                  ? 'text-noir font-bold font-cinematic'
+                  : 'text-parchment-dim hover:text-parchment hover:bg-noir/50 font-cinematic'
               }`}
             >
-              <Icon className="w-3.5 h-3.5" />
+              {isActive && (
+                <motion.div
+                  layoutId="activeDockPill"
+                  className="absolute inset-0 bg-gradient-to-r from-gold via-gold-bright to-gold rounded-full shadow-gold -z-10"
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                />
+              )}
+              <Icon className="w-4 h-4 shrink-0" />
               <span className="text-[10px] sm:text-[11px] tracking-wider">
                 {item.label}
               </span>

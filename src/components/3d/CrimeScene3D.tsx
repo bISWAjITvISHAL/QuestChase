@@ -9,6 +9,7 @@ import { soundEngine } from '@/lib/soundEngine';
 interface CrimeScene3DProps {
   actions: InvestigationAction[];
   onSelectAction: (action: InvestigationAction) => void;
+  hideHotspots?: boolean;
 }
 
 interface SceneObjectHotspotProps {
@@ -36,7 +37,7 @@ function SceneObjectHotspot({ position, action, onSelect }: SceneObjectHotspotPr
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
 
-      <Html position={[0, 0.28, 0]} center distanceFactor={6}>
+      <Html position={[0, 0.28, 0]} center distanceFactor={6} zIndexRange={[0, 10]}>
         <button
           onClick={() => {
             soundEngine.playPaperRustle();
@@ -80,7 +81,7 @@ function SceneObjectHotspot({ position, action, onSelect }: SceneObjectHotspotPr
   );
 }
 
-export function CrimeScene3D({ actions, onSelectAction }: CrimeScene3DProps) {
+export function CrimeScene3D({ actions, onSelectAction, hideHotspots = false }: CrimeScene3DProps) {
   // Coordinate mappings for case 001 crime scene items
   const actionPositions: Record<string, [number, number, number]> = {
     act_01: [-0.3, 1.0, 0.1], // Tumbler
@@ -92,6 +93,9 @@ export function CrimeScene3D({ actions, onSelectAction }: CrimeScene3DProps) {
     act_07: [2.2, 1.4, 1.2], // Julian Vance
     act_08: [0.1, 0.92, -0.1], // Cyanide fountain pen
   };
+
+  // Only render hotspots for unexecuted actions so purchased clues completely disappear from the scene
+  const activeActions = actions.filter((act) => !act.isExecuted);
 
   return (
     <div className="w-full h-full relative cursor-grab active:cursor-grabbing bg-noir">
@@ -166,18 +170,19 @@ export function CrimeScene3D({ actions, onSelectAction }: CrimeScene3DProps) {
           </mesh>
         </group>
 
-        {/* Hotspots mapped to investigation actions */}
-        {actions.map((act) => {
-          const pos = actionPositions[act.id] || [0, 1.2, 0];
-          return (
-            <SceneObjectHotspot
-              key={act.id}
-              position={pos}
-              action={act}
-              onSelect={onSelectAction}
-            />
-          );
-        })}
+        {/* Hotspots mapped to unexecuted investigation actions */}
+        {!hideHotspots &&
+          activeActions.map((act) => {
+            const pos = actionPositions[act.id] || [0, 1.2, 0];
+            return (
+              <SceneObjectHotspot
+                key={act.id}
+                position={pos}
+                action={act}
+                onSelect={onSelectAction}
+              />
+            );
+          })}
       </Canvas>
     </div>
   );

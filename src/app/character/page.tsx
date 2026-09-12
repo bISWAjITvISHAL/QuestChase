@@ -100,7 +100,7 @@ export default function CharacterProfilePage() {
                     {profile.rank}
                   </span>
                   <span className="text-xs text-parchment-dim typewriter-text">
-                    "{currentRankInfo.title}"
+                    &ldquo;{currentRankInfo.title}&rdquo;
                   </span>
                 </div>
               </div>

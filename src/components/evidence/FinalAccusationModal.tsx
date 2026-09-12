@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CaseFile } from '@/lib/types';
 import { useGameStore } from '@/lib/store';
+import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import {
   X,
   ShieldAlert,
@@ -74,6 +75,17 @@ export function FinalAccusationModal({
   const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<{ isCorrect: boolean; feedback: string } | null>(null);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -222,23 +234,25 @@ export function FinalAccusationModal({
             </div>
 
             {result.isCorrect ? (
-              <button
+              <AnimatedButton
                 onClick={() => {
                   onClose();
                   router.push('/headquarters');
                 }}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-gold via-gold-bright to-gold text-noir font-cinematic font-bold py-3.5 rounded shadow-gold text-xs tracking-widest uppercase transition tactile-btn"
+                variant="gold"
+                className="w-full min-h-[48px] text-xs font-cinematic font-bold tracking-widest uppercase flex items-center justify-center gap-2"
               >
-                <span>RETURN TO DETECTIVE'S DESK</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+                <span>RETURN TO DETECTIVE&apos;S DESK</span>
+                <ArrowRight className="w-4 h-4 inline" />
+              </AnimatedButton>
             ) : (
-              <button
+              <AnimatedButton
                 onClick={() => setResult(null)}
-                className="w-full flex items-center justify-center gap-2 bg-charcoal hover:bg-noir border border-steel/40 text-parchment font-cinematic font-bold py-3 rounded text-xs transition tactile-btn"
+                variant="ghost"
+                className="w-full min-h-[44px] text-xs font-cinematic font-bold tracking-wider uppercase border border-steel/40 text-parchment"
               >
-                <span>RE-EXAMINE THE CASE EVIDENCE & RETRY</span>
-              </button>
+                <span>RE-EXAMINE THE CASE EVIDENCE &amp; RETRY</span>
+              </AnimatedButton>
             )}
           </div>
         ) : (
@@ -395,14 +409,16 @@ export function FinalAccusationModal({
             </div>
 
             {/* Submit Button */}
-            <button
+            <AnimatedButton
               type="submit"
-              disabled={isSubmitting}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-crimson via-crimson-bright to-crimson hover:from-crimson-bright hover:to-crimson text-parchment font-cinematic font-bold py-3.5 rounded shadow-crimson transition tracking-widest text-xs uppercase tactile-btn disabled:opacity-50"
+              loading={isSubmitting}
+              loadingText="SUBMITTING TRIBUNAL DEDUCTION..."
+              variant="crimson"
+              className="w-full min-h-[48px] text-xs font-cinematic font-bold tracking-widest uppercase flex items-center justify-center gap-2"
             >
-              <ShieldAlert className="w-4 h-4" />
-              <span>{isSubmitting ? 'SUBMITTING TRIBUNAL DEDUCTION...' : 'SUBMIT FINAL DEDUCTION'}</span>
-            </button>
+              <ShieldAlert className="w-4 h-4 inline mr-1" />
+              <span>SUBMIT FINAL DEDUCTION</span>
+            </AnimatedButton>
           </form>
         )}
       </div>

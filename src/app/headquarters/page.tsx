@@ -102,7 +102,7 @@ export default function DetectivesDeskPage() {
               <div className="flex items-center justify-between border-b border-[#5a422d] pb-3 mb-4">
                 <div className="flex items-center gap-2">
                   <div className="bg-[#4a3625] border-t border-x border-[#8c6527] px-3.5 py-1 rounded-t text-xs font-cinematic font-bold text-parchment uppercase tracking-wider">
-                    TODAY'S CASEWORK
+                    TODAY&apos;S CASEWORK
                   </div>
                   <div className="hidden sm:block text-[11px] typewriter-text text-parchment-dim">
                     ACTIVE QUEST DOCKETS
@@ -178,7 +178,7 @@ export default function DetectivesDeskPage() {
                           {ev.title}
                         </div>
                         <div className="text-[9px] typewriter-text text-parchment-dim mt-0.5 line-clamp-2">
-                          "{ev.description}"
+                          &ldquo;{ev.description}&rdquo;
                         </div>
                       </div>
 
@@ -495,7 +495,7 @@ export default function DetectivesDeskPage() {
               </div>
 
               <div className="text-xs typewriter-text text-parchment-dim leading-relaxed mb-4 border-l-2 border-gold/40 pl-3">
-                "{ev.description}"
+                &ldquo;{ev.description}&rdquo;
               </div>
 
               <div className="bg-noir/90 border border-steel/30 rounded p-3 text-xs typewriter-text space-y-1.5 mb-5">

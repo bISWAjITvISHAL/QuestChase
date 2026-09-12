@@ -23,6 +23,8 @@ import {
   LogOut,
 } from 'lucide-react';
 import { soundEngine } from '@/lib/soundEngine';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
+import { AnimatedProgressBar } from '@/components/ui/AnimatedProgressBar';
 
 export function DetectiveHUD() {
   const pathname = usePathname();
@@ -59,11 +61,14 @@ export function DetectiveHUD() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 bg-[#0c0d10]/95 backdrop-blur-md border-b border-[#2b241c] px-3 sm:px-6 py-2.5 shadow-2xl">
+    <header className="fixed top-0 left-0 right-0 z-40 bg-[#0c0d10]/95 backdrop-blur-md border-b border-[#2b241c] px-3 sm:px-6 py-2 shadow-2xl">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
         {/* Left: Fedora/Pipe Logo + QuestChase Name */}
-        <Link href="/headquarters" className="flex items-center gap-2.5 group shrink-0">
-          <div className="w-8 h-8 rounded bg-gradient-to-br from-[#2a2219] to-noir border border-gold/40 flex items-center justify-center text-gold shadow-md group-hover:scale-105 transition">
+        <Link
+          href="/headquarters"
+          className="flex items-center gap-2.5 group shrink-0 min-h-[44px] py-1 rounded focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none"
+        >
+          <div className="w-8 h-8 rounded bg-gradient-to-br from-[#2a2219] to-noir border border-gold/40 flex items-center justify-center text-gold shadow-md group-hover:scale-105 transition duration-150">
             <svg
               className="w-5 h-5 text-gold"
               viewBox="0 0 24 24"
@@ -106,46 +111,48 @@ export function DetectiveHUD() {
           <div className="hidden md:flex flex-col items-end">
             <div className="flex items-center gap-1.5 text-xs font-cinematic font-bold text-parchment">
               <span>LEVEL {profile.level}</span>
-              <span className="text-[10px] text-steel typewriter-text">
-                ({profile.xp.toLocaleString()} / {profile.xpToNextLevel.toLocaleString()} XP)
+              <span className="text-[10px] text-steel typewriter-text flex items-center gap-0.5">
+                (<AnimatedNumber value={profile.xp} /> / {profile.xpToNextLevel.toLocaleString()} XP)
               </span>
             </div>
-            <div className="w-28 h-1.5 bg-noir border border-steel/40 rounded-full overflow-hidden mt-0.5">
-              <div
-                className="h-full bg-gradient-to-r from-gold to-gold-bright transition-all duration-500"
-                style={{ width: `${xpPercentage}%` }}
+            <div className="w-32 mt-1">
+              <AnimatedProgressBar
+                percentage={xpPercentage}
+                height="h-1.5"
+                ariaLabel="Detective clearance level progress"
               />
             </div>
           </div>
 
-          {/* Gold counter */}
-          <div className="flex items-center gap-1 bg-noir/90 border border-gold/40 px-2.5 py-1 rounded shadow-noir">
+          {/* Gold counter with AnimatedNumber */}
+          <div className="flex items-center gap-1 bg-noir/90 border border-gold/40 px-2.5 py-1 min-h-[38px] rounded shadow-noir">
             <div className="text-right">
               <div className="text-[7px] text-steel typewriter-text leading-none uppercase">GOLD</div>
               <div className="text-xs font-cinematic font-bold text-gold leading-none mt-0.5">
-                {gold}
+                <AnimatedNumber value={gold} />
               </div>
             </div>
-            <Coins className="w-3.5 h-3.5 text-gold animate-pulse ml-0.5" />
+            <Coins className="w-3.5 h-3.5 text-gold animate-pulse ml-0.5 shrink-0" />
           </div>
 
           {/* Streak counter */}
-          <div className="flex items-center gap-1 bg-noir/90 border border-amber-600/40 px-2.5 py-1 rounded shadow-noir">
+          <div className="flex items-center gap-1 bg-noir/90 border border-amber-600/40 px-2.5 py-1 min-h-[38px] rounded shadow-noir">
             <div className="text-right">
               <div className="text-[7px] text-steel typewriter-text leading-none uppercase">STREAK</div>
               <div className="text-xs font-cinematic font-bold text-amber-400 leading-none mt-0.5">
                 {profile.streak}D
               </div>
             </div>
-            <Flame className="w-3.5 h-3.5 text-amber-500 ml-0.5" />
+            <Flame className="w-3.5 h-3.5 text-amber-500 ml-0.5 shrink-0" />
           </div>
 
           {/* Audio & Ambience Controls */}
-          <div className="hidden lg:flex items-center gap-1 bg-noir border border-steel/40 rounded p-0.5">
+          <div className="hidden lg:flex items-center gap-1 bg-noir border border-steel/40 rounded p-1">
             <button
               onClick={handleToggleAudio}
               title={audioOn ? 'Mute Sound FX' : 'Enable Sound FX'}
-              className={`p-1 rounded transition ${
+              aria-label={audioOn ? 'Mute Sound FX' : 'Enable Sound FX'}
+              className={`p-2 rounded transition cursor-pointer min-w-[32px] min-h-[32px] flex items-center justify-center ${
                 audioOn ? 'text-gold hover:bg-charcoal' : 'text-steel hover:text-parchment'
               }`}
             >
@@ -154,7 +161,8 @@ export function DetectiveHUD() {
             <button
               onClick={handleToggleRain}
               title={rainOn ? 'Mute Rain Ambience' : 'Enable Rain Ambience'}
-              className={`p-1 rounded transition ${
+              aria-label={rainOn ? 'Mute Rain Ambience' : 'Enable Rain Ambience'}
+              className={`p-2 rounded transition cursor-pointer min-w-[32px] min-h-[32px] flex items-center justify-center ${
                 rainOn ? 'text-blue-400 hover:bg-charcoal' : 'text-steel hover:text-parchment'
               }`}
             >
@@ -162,11 +170,12 @@ export function DetectiveHUD() {
             </button>
           </div>
 
-          {/* Profile Avatar / Link */}
+          {/* Profile Avatar / Link with 44px touch target */}
           <Link
             href="/character"
-            className="w-8 h-8 rounded-full bg-noir border-2 border-gold/60 flex items-center justify-center text-gold hover:scale-105 transition shadow-gold"
+            className="w-9 h-9 rounded-full bg-noir border-2 border-gold/60 flex items-center justify-center text-gold hover:scale-105 active:scale-95 transition shadow-gold min-w-[36px] min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
             title="Detective Profile"
+            aria-label="View Detective Dossier & Profile"
           >
             <User className="w-4 h-4" />
           </Link>
@@ -174,8 +183,9 @@ export function DetectiveHUD() {
           {/* Sign Out Button */}
           <button
             onClick={() => signOut()}
-            className="p-1.5 rounded bg-noir border border-steel/40 text-steel hover:text-crimson-bright hover:border-crimson/50 transition flex items-center gap-1"
+            className="px-2 py-1.5 min-h-[38px] rounded bg-noir border border-steel/40 text-steel hover:text-crimson-bright hover:border-crimson/50 active:scale-95 transition flex items-center gap-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-crimson"
             title="Sign Out of Bureau"
+            aria-label="Sign Out of Bureau"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span className="hidden sm:inline text-[8px] font-cinematic uppercase tracking-wider">LOGOUT</span>

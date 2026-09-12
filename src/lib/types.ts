@@ -26,7 +26,7 @@ export interface RankInfo {
   description: string;
 }
 
-export type TaskDifficulty = 'E' | 'D' | 'C' | 'B' | 'A';
+export type TaskDifficulty = 'E' | 'D' | 'C' | 'B' | 'A' | 'S';
 
 export type TaskCategory =
   | 'Intelligence'
@@ -214,4 +214,16 @@ export interface DetectiveProfile {
     ambienceEnabled: boolean;
     reducedMotion: boolean;
   };
+}
+
+export type ToastType = 'success' | 'error' | 'info' | 'reward';
+
+export interface ToastNotification {
+  id: string;
+  type: ToastType;
+  title: string;
+  message?: string;
+  xpReward?: number;
+  goldReward?: number;
+  duration?: number;
 }

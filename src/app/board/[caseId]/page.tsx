@@ -52,6 +52,7 @@ export default function EvidenceBoardPage() {
   const [accusationModalOpen, setAccusationModalOpen] = useState(false);
   const [hoveredEvidenceId, setHoveredEvidenceId] = useState<string | null>(null);
   const [hoveredConnectionId, setHoveredConnectionId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
 
   // Fallback positions for evidence pins on the cork board
   const defaultPositions = [
@@ -226,13 +227,33 @@ export default function EvidenceBoardPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Mobile View Mode Switcher */}
+            <div className="flex sm:hidden bg-noir border border-steel/40 p-0.5 rounded">
+              <button
+                onClick={() => setViewMode('board')}
+                className={`px-2 py-1 text-[10px] font-cinematic font-bold rounded transition-colors ${
+                  viewMode === 'board' ? 'bg-gold text-noir' : 'text-steel hover:text-parchment'
+                }`}
+              >
+                BOARD
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-2 py-1 text-[10px] font-cinematic font-bold rounded transition-colors ${
+                  viewMode === 'list' ? 'bg-gold text-noir' : 'text-steel hover:text-parchment'
+                }`}
+              >
+                LIST
+              </button>
+            </div>
+
             <button
               onClick={() => {
                 soundEngine.playPaperRustle();
                 router.push(`/investigate/${currentCase.id}`);
               }}
-              className="flex items-center gap-1.5 bg-charcoal hover:bg-noir border border-steel/40 text-parchment font-cinematic font-bold text-xs py-2 px-3 rounded transition tactile-btn"
+              className="flex items-center gap-1.5 bg-charcoal hover:bg-noir border border-steel/40 text-parchment font-cinematic font-bold text-xs py-2 px-3 rounded transition tactile-btn min-h-[44px]"
             >
               <Search className="w-3.5 h-3.5 text-gold" />
               <span>CRIME SCENE</span>
@@ -244,7 +265,7 @@ export default function EvidenceBoardPage() {
                 setIsLinkingMode(!isLinkingMode);
                 setThreadStartId(null);
               }}
-              className={`flex items-center gap-1.5 font-cinematic font-bold text-xs py-2 px-3.5 rounded transition tactile-btn ${
+              className={`flex items-center gap-1.5 font-cinematic font-bold text-xs py-2 px-3.5 rounded transition tactile-btn min-h-[44px] ${
                 isLinkingMode
                   ? 'bg-crimson text-parchment shadow-crimson animate-pulse border border-red-400 ring-2 ring-crimson/50'
                   : 'bg-noir border border-gold/40 text-gold hover:bg-gold hover:text-noir'
@@ -256,7 +277,7 @@ export default function EvidenceBoardPage() {
 
             <button
               onClick={() => setAccusationModalOpen(true)}
-              className="flex items-center gap-1.5 bg-gradient-to-r from-crimson to-crimson-bright hover:from-crimson-bright hover:to-crimson text-parchment font-cinematic font-bold text-xs py-2 px-4 rounded shadow-crimson transition tactile-btn tracking-wider"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-crimson to-crimson-bright hover:from-crimson-bright hover:to-crimson text-parchment font-cinematic font-bold text-xs py-2 px-4 rounded shadow-crimson transition tactile-btn tracking-wider min-h-[44px]"
             >
               <CheckCircle className="w-3.5 h-3.5 text-gold" />
               <span>FINAL ACCUSATION</span>
@@ -320,7 +341,7 @@ export default function EvidenceBoardPage() {
                   </div>
 
                   <div className="text-[9px] typewriter-text text-parchment-dim line-clamp-2 italic bg-noir/50 p-1.5 rounded border border-steel/15 mb-1.5">
-                    "{suspect.alibi}"
+                    &ldquo;{suspect.alibi}&rdquo;
                   </div>
 
                   <div className="flex items-center justify-between text-[8px] typewriter-text text-steel">
@@ -358,8 +379,71 @@ export default function EvidenceBoardPage() {
           </div>
         )}
 
+        {/* Mobile Dossier List View */}
+        {viewMode === 'list' && (
+          <div className="sm:hidden space-y-3">
+            <div className="text-[11px] font-cinematic font-bold text-gold uppercase tracking-wider mb-2">
+              DISCOVERED EVIDENCE DOSSIER ({discoveredEvidence.length} ITEMS)
+            </div>
+            {discoveredEvidence.map((ev) => {
+              const isSelected = threadStartId === ev.id;
+              const isContradicted = currentCase.connections.some(
+                (c) => c.isDeductionValid && (c.fromEvidenceId === ev.id || c.toEvidenceId === ev.id)
+              );
+              return (
+                <div
+                  key={ev.id}
+                  className={`bg-[#161412] border-2 rounded p-3.5 shadow-dossier ${
+                    isSelected
+                      ? 'border-crimson-bright ring-2 ring-crimson'
+                      : isContradicted
+                      ? 'border-crimson/80'
+                      : 'border-steel/30'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-[10px] font-cinematic font-bold text-gold mb-1">
+                    <span>{ev.type}</span>
+                    {ev.timelineTimestamp && (
+                      <span className="text-crimson-bright flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {ev.timelineTimestamp}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-cinematic font-bold text-parchment mb-1">
+                    {ev.title}
+                  </h3>
+                  <p className="text-xs text-parchment-dim typewriter-text mb-3 leading-relaxed">
+                    {ev.description}
+                  </p>
+                  <div className="flex items-center justify-between gap-2 border-t border-steel/20 pt-2 text-[10px]">
+                    <span className="text-steel">SRC: {ev.source}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setSelectedEvidence(ev)}
+                        className="px-2.5 py-1.5 min-h-[36px] bg-noir border border-steel/40 text-parchment rounded text-[10px] font-cinematic uppercase active:scale-95"
+                      >
+                        Details
+                      </button>
+                      {isLinkingMode && (
+                        <button
+                          onClick={() => handleCardClick(ev)}
+                          className={`px-2.5 py-1.5 min-h-[36px] rounded text-[10px] font-cinematic font-bold uppercase active:scale-95 ${
+                            isSelected ? 'bg-crimson text-parchment' : 'bg-gold text-noir'
+                          }`}
+                        >
+                          {isSelected ? 'Pin 1' : 'Connect'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Cork Board Container */}
-        <div className="relative w-full min-h-[620px] bg-[#1a140f] border-4 border-[#2c1d12] rounded shadow-2xl p-6 overflow-x-auto">
+        <div className={`relative w-full min-h-[620px] bg-[#1a140f] border-4 border-[#2c1d12] rounded shadow-2xl p-6 overflow-x-auto ${viewMode === 'list' ? 'hidden sm:block' : 'block'}`}>
           {/* Cork Texture Overlay */}
           <div
             className="absolute inset-0 opacity-25 pointer-events-none"
@@ -421,7 +505,7 @@ export default function EvidenceBoardPage() {
                     strokeWidth={isContradiction ? '3.5' : '2.5'}
                     strokeDasharray={isContradiction ? '6 3' : undefined}
                     filter={isContradiction ? 'url(#yarnGlow)' : undefined}
-                    className="evidence-thread"
+                    className="evidence-thread animate-thread-draw"
                   />
 
                   {/* Brass Pin Endpoints */}
@@ -715,7 +799,7 @@ export default function EvidenceBoardPage() {
                   FORMAL SWORN ALIBI:
                 </div>
                 <p className="text-parchment-dim italic leading-relaxed">
-                  "{selectedSuspect.alibi}"
+                  &ldquo;{selectedSuspect.alibi}&rdquo;
                 </p>
               </div>
 

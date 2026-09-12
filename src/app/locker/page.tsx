@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { GameShell } from '@/components/layout/GameShell';
 import { useGameStore } from '@/lib/store';
+import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import {
   Package,
   Search,
@@ -31,15 +32,21 @@ const GEAR_ICONS: Record<string, React.ElementType> = {
 export default function LockerPage() {
   const { equipment, profile, purchaseEquipment, toggleEquipItem } = useGameStore();
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [purchasingId, setPurchasingId] = useState<string | null>(null);
 
   const gold = profile.gold || 0;
 
   const handlePurchase = async (itemId: string) => {
+    setPurchasingId(itemId);
     soundEngine.playTypewriter();
-    const success = await purchaseEquipment(itemId);
-    if (!success) {
-      setFeedback('INSUFFICIENT GOLD: Complete casework quests to earn Gold.');
-      setTimeout(() => setFeedback(null), 4000);
+    try {
+      const success = await purchaseEquipment(itemId);
+      if (!success) {
+        setFeedback('INSUFFICIENT GOLD: Complete casework quests to earn Gold.');
+        setTimeout(() => setFeedback(null), 4000);
+      }
+    } finally {
+      setPurchasingId(null);
     }
   };
 
@@ -171,30 +178,30 @@ export default function LockerPage() {
                 {/* Purchase / Equip Action Button */}
                 <div className="pt-4 mt-4 border-t border-steel/20">
                   {!item.isUnlocked ? (
-                    <button
+                    <AnimatedButton
                       onClick={() => handlePurchase(item.id)}
                       disabled={!canAfford}
-                      className={`w-full flex items-center justify-center gap-1.5 font-cinematic font-bold text-xs py-2 px-3 rounded-sm transition ${
-                        canAfford
-                          ? 'bg-gradient-to-r from-gold to-gold-bright text-noir shadow-gold hover:opacity-95'
-                          : 'bg-steel-dark text-steel cursor-not-allowed'
-                      }`}
+                      loading={purchasingId === item.id}
+                      loadingText="REQUISITIONING..."
+                      variant="gold"
+                      className="w-full min-h-[44px] text-xs font-cinematic font-bold tracking-wider uppercase flex items-center justify-center gap-1.5"
                     >
-                      <Lock className="w-3.5 h-3.5" />
+                      <Lock className="w-3.5 h-3.5 inline mr-1" />
                       <span>REQUISITION ({itemCost} GOLD)</span>
-                    </button>
+                    </AnimatedButton>
                   ) : (
-                    <button
+                    <AnimatedButton
                       onClick={() => handleToggle(item.id)}
-                      className={`w-full flex items-center justify-center gap-1.5 font-cinematic font-bold text-xs py-2 px-3 rounded-sm transition ${
+                      variant={item.isEquipped ? 'ghost' : 'gold'}
+                      className={`w-full min-h-[44px] text-xs font-cinematic font-bold tracking-wider uppercase flex items-center justify-center gap-1.5 ${
                         item.isEquipped
-                          ? 'bg-charcoal hover:bg-noir border border-steel/40 text-parchment'
-                          : 'bg-gold hover:bg-gold-bright text-noir shadow-gold'
+                          ? 'border border-steel/40 text-parchment hover:bg-charcoal'
+                          : ''
                       }`}
                     >
-                      <Check className="w-3.5 h-3.5" />
+                      <Check className="w-3.5 h-3.5 inline mr-1" />
                       <span>{item.isEquipped ? 'UNEQUIP GEAR' : 'EQUIP TO LOADOUT'}</span>
-                    </button>
+                    </AnimatedButton>
                   )}
                 </div>
               </div>

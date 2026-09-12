@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { GameShell } from '@/components/layout/GameShell';
 import { useGameStore } from '@/lib/store';
+import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import {
   FolderOpen,
   Lock,
@@ -144,13 +145,14 @@ export default function CasesPage() {
                       <span>BUREAU PREPARATION IN PROGRESS</span>
                     </div>
                   ) : !isLocked ? (
-                    <button
+                    <AnimatedButton
                       onClick={() => handleOpenCase(cf.id)}
-                      className="flex items-center gap-2 bg-gradient-to-r from-gold via-gold-bright to-gold hover:opacity-95 text-noir font-cinematic font-bold text-xs py-2 px-4 rounded shadow-gold transition active:scale-95 uppercase tracking-wider tactile-btn"
+                      variant="gold"
+                      className="min-h-[44px] text-xs font-cinematic font-bold tracking-wider uppercase flex items-center gap-2"
                     >
                       <span>{isCurrent ? 'ACCESS CURRENT DESK' : 'SWITCH ACTIVE CASE'}</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
+                      <ArrowRight className="w-4 h-4 inline" />
+                    </AnimatedButton>
                   ) : (
                     <div className="flex items-center gap-1.5 text-xs text-steel font-cinematic font-bold bg-[#0b0c0e] px-3 py-1.5 rounded border border-steel/30">
                       <Lock className="w-3.5 h-3.5" />

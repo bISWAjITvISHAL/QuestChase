@@ -9,6 +9,7 @@ const DIFFICULTY_REWARDS: Record<TaskDifficulty, { xp: number; gold: number; att
   C: { xp: 80, gold: 20, attr: 15 },
   B: { xp: 120, gold: 35, attr: 18 },
   A: { xp: 180, gold: 50, attr: 25 },
+  S: { xp: 240, gold: 70, attr: 35 },
 };
 
 export async function GET(request: NextRequest) {
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
       : 'MEDIUM';
 
     // Calculate server-authoritative rewards
-    const rewardBase = DIFFICULTY_REWARDS[difficulty];
+    const rewardBase = DIFFICULTY_REWARDS[difficulty] || DIFFICULTY_REWARDS['B'];
     const attrKey = ['Intelligence', 'Perception', 'Discipline', 'Resilience'].includes(category)
       ? category.toLowerCase()
       : 'discipline';
@@ -104,6 +105,7 @@ export async function POST(request: NextRequest) {
       gold_reward: rewardBase.gold,
       attribute_rewards: attributeRewards,
       is_completed: false,
+      due_date: body.dueDate ? new Date(body.dueDate).toISOString() : null,
       created_at: new Date().toISOString(),
     };
 
@@ -131,6 +133,7 @@ export async function POST(request: NextRequest) {
         goldReward: inserted.gold_reward,
         attributeRewards: inserted.attribute_rewards,
         isCompleted: inserted.is_completed,
+        dueDate: inserted.due_date,
         createdAt: inserted.created_at,
       },
     });

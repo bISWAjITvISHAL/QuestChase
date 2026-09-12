@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { GameShell } from '@/components/layout/GameShell';
 import { useGameStore } from '@/lib/store';
 import { CrimeScene3D } from '@/components/3d/CrimeScene3D';
 import { InvestigationAction, EvidenceItem } from '@/lib/types';
+import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import {
   Search,
   Share2,
@@ -35,25 +36,42 @@ export default function InvestigatePage() {
   const [selectedAction, setSelectedAction] = useState<InvestigationAction | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [revealedEvidence, setRevealedEvidence] = useState<EvidenceItem | null>(null);
+  const [isInvestigating, setIsInvestigating] = useState(false);
+
+  // Close reveal modal on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && revealedEvidence) {
+        setRevealedEvidence(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [revealedEvidence]);
 
   const discoveredEvidence = currentCase.evidence.filter((e) => e.isDiscovered);
   const currentChapter = currentCase.chapters.find((ch) => !ch.isCompleted) || currentCase.chapters[0];
   const gold = profile.gold || 0;
 
   const handleExecute = async (action: InvestigationAction) => {
-    const result = await executeInvestigationAction(currentCase.id, action.id);
-    if (result.success) {
-      soundEngine.playClueFound();
-      setFeedbackMessage({ type: 'success', text: result.message });
-      setSelectedAction({ ...action, isExecuted: true });
+    setIsInvestigating(true);
+    try {
+      const result = await executeInvestigationAction(currentCase.id, action.id);
+      if (result.success) {
+        soundEngine.playClueFound();
+        setFeedbackMessage({ type: 'success', text: result.message });
+        setSelectedAction(null);
 
-      // Find the unlocked evidence item and show the cinematic clue reveal modal
-      const ev = result.evidence || currentCase.evidence.find((e) => e.id === action.yieldsEvidenceId);
-      if (ev) {
-        setRevealedEvidence(ev);
+        // Find the unlocked evidence item and show the cinematic clue reveal modal
+        const ev = result.evidence || currentCase.evidence.find((e) => e.id === action.yieldsEvidenceId);
+        if (ev) {
+          setRevealedEvidence(ev);
+        }
+      } else {
+        setFeedbackMessage({ type: 'error', text: result.message });
       }
-    } else {
-      setFeedbackMessage({ type: 'error', text: result.message });
+    } finally {
+      setIsInvestigating(false);
     }
   };
 
@@ -138,6 +156,7 @@ export default function InvestigatePage() {
             <div className="flex-1 w-full h-full min-h-[300px]">
               <CrimeScene3D
                 actions={currentCase.actions}
+                hideHotspots={!!revealedEvidence}
                 onSelectAction={(action) => {
                   setSelectedAction(action);
                   setFeedbackMessage(null);
@@ -229,18 +248,21 @@ export default function InvestigatePage() {
 
                 {/* Execute Button */}
                 {!selectedAction.isExecuted ? (
-                  <button
+                  <AnimatedButton
                     onClick={() => handleExecute(selectedAction)}
-                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-crimson to-crimson-bright hover:from-crimson-bright hover:to-crimson text-parchment font-cinematic font-bold py-3 px-4 rounded-sm shadow-crimson transition active:scale-95 text-xs uppercase tracking-wider"
+                    loading={isInvestigating}
+                    loadingText="INVESTIGATING FORENSIC SCENE..."
+                    variant="crimson"
+                    className="w-full min-h-[44px] text-xs uppercase tracking-wider font-cinematic font-bold"
                   >
-                    <Search className="w-4 h-4" />
-                    <span>SPEND GOLD & EXECUTE ACTION</span>
-                  </button>
+                    <Search className="w-4 h-4 mr-2 inline" />
+                    <span>SPEND GOLD &amp; EXECUTE ACTION</span>
+                  </AnimatedButton>
                 ) : (
                   <div className="bg-emerald-950/30 border border-emerald-500/40 p-3 rounded text-center">
                     <div className="flex items-center justify-center gap-1.5 text-xs font-cinematic font-bold text-emerald-400">
                       <CheckCircle className="w-4 h-4" />
-                      <span>EVIDENCE DISCOVERED & LOGGED</span>
+                      <span>EVIDENCE DISCOVERED &amp; LOGGED</span>
                     </div>
                     <div className="text-[10px] text-parchment-dim typewriter-text mt-1">
                       Pinned to Evidence Board. Connect threads to form deductions.
@@ -273,8 +295,13 @@ export default function InvestigatePage() {
 
       {/* Cinematic Clue Reveal Modal matching Specification Section 22 */}
       {revealedEvidence && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-noir/90 backdrop-blur-xl p-4 animate-in fade-in duration-300">
-          <div className="relative max-w-md w-full bg-[#181512] border-2 border-gold rounded-sm p-6 shadow-gold text-parchment">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="clue-reveal-title"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-noir/90 backdrop-blur-xl p-4 animate-in fade-in duration-300"
+        >
+          <div className="relative max-w-md w-full bg-[#181512] border-2 border-gold rounded-sm p-6 shadow-gold text-parchment animate-clue-reveal">
             {/* Scanning light animation bar */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-gold to-transparent animate-pulse" />
 
@@ -283,12 +310,12 @@ export default function InvestigatePage() {
               <span className="text-crimson-bright">CLUE #{revealedEvidence.id.replace('ev_', '')}</span>
             </div>
 
-            <h2 className="text-xl font-cinematic font-black text-parchment mb-2 leading-tight">
+            <h2 id="clue-reveal-title" className="text-xl font-cinematic font-black text-parchment mb-2 leading-tight">
               {revealedEvidence.title}
             </h2>
 
             <div className="text-xs text-parchment-dim typewriter-text mb-4 border-l-2 border-gold/50 pl-3 leading-relaxed">
-              "{revealedEvidence.description}"
+              &ldquo;{revealedEvidence.description}&rdquo;
             </div>
 
             {/* Metadata Table */}
@@ -314,26 +341,28 @@ export default function InvestigatePage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2">
-              <button
+              <AnimatedButton
                 onClick={() => {
                   soundEngine.playStampThud();
                   setRevealedEvidence(null);
                   router.push(`/board/${currentCase.id}`);
                 }}
-                className="flex-1 bg-gradient-to-r from-gold to-gold-bright hover:from-gold-bright hover:to-gold text-noir font-cinematic font-black text-xs py-3 rounded-sm shadow-gold transition active:scale-95 uppercase tracking-wider flex items-center justify-center gap-2 tactile-btn"
+                variant="gold"
+                className="flex-1 min-h-[44px] text-xs font-cinematic font-black tracking-wider flex items-center justify-center gap-2 uppercase"
               >
-                <span>PIN & VIEW ON BOARD</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-              <button
+                <span>PIN &amp; VIEW ON BOARD</span>
+                <ArrowRight className="w-4 h-4 inline" />
+              </AnimatedButton>
+              <AnimatedButton
                 onClick={() => {
                   soundEngine.playStampThud();
                   setRevealedEvidence(null);
                 }}
-                className="bg-charcoal hover:bg-noir border border-steel/40 text-parchment font-cinematic font-bold text-xs px-4 py-3 rounded-sm transition active:scale-95 uppercase tracking-wider tactile-btn"
+                variant="ghost"
+                className="min-h-[44px] text-xs font-cinematic font-bold tracking-wider uppercase border border-steel/40 text-parchment"
               >
                 CONTINUE SEARCH
-              </button>
+              </AnimatedButton>
             </div>
           </div>
         </div>

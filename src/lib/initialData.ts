@@ -20,6 +20,7 @@ export const DIFFICULTY_REWARDS: Record<
   C: { xp: 80, gold: 20, attributeXp: 15 },
   B: { xp: 120, gold: 35, attributeXp: 18 },
   A: { xp: 180, gold: 50, attributeXp: 25 },
+  S: { xp: 240, gold: 70, attributeXp: 35 },
 };
 
 export const RANKS: RankInfo[] = [

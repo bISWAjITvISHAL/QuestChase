@@ -175,7 +175,7 @@ export default function LandingPage() {
                 Complete your tasks. Follow the clues. Solve the case.
               </p>
               <p className="text-xs sm:text-sm text-parchment-dim typewriter-text leading-relaxed max-w-xl">
-                Transform your daily productivity into investigative currency. Every completed objective earns XP and Gold to interrogate suspects, analyze crime scenes, and deduce the truth behind Lord Blackwood's murder.
+                Transform your daily productivity into investigative currency. Every completed objective earns XP and Gold to interrogate suspects, analyze crime scenes, and deduce the truth behind Lord Blackwood&apos;s murder.
               </p>
             </div>
 
@@ -303,7 +303,7 @@ export default function LandingPage() {
                       CLUE DOSSIER
                     </div>
                     <div className="text-[10px] typewriter-text text-parchment-dim leading-tight">
-                      "At 22:47, a message was deleted from the victim's laptop."
+                      &ldquo;At 22:47, a message was deleted from the victim&apos;s laptop.&rdquo;
                     </div>
                   </div>
 
@@ -581,7 +581,7 @@ export default function LandingPage() {
             QUESTCHASE • PRODUCTION-QUALITY GAMIFIED PRODUCTIVITY SYSTEM
           </div>
           <div>
-            "Complete your tasks. Follow the clues. Solve the case."
+            &ldquo;Complete your tasks. Follow the clues. Solve the case.&rdquo;
           </div>
         </div>
       </footer>

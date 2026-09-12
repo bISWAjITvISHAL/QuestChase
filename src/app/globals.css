@@ -1,0 +1,214 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,800;1,600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-charcoal: #0B0C0E;
+  --color-noir: #050506;
+  --color-parchment: #E7E1D5;
+  --color-crimson: #7F2525;
+  --color-gold: #A88952;
+  --color-steel: #555A60;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-noir);
+  color: var(--color-parchment);
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(circle at 50% 20%, rgba(168, 137, 82, 0.05) 0%, transparent 60%),
+    radial-gradient(circle at 80% 80%, rgba(127, 37, 37, 0.04) 0%, transparent 50%),
+    linear-gradient(to bottom, #050506 0%, #0B0C0E 100%);
+  min-height: 100vh;
+}
+
+/* Custom Noir Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #050506;
+}
+::-webkit-scrollbar-thumb {
+  background: #23262A;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555A60;
+}
+
+/* Tactile Paper / Dossier Texture */
+.parchment-card {
+  background: #111317;
+  border: 1px solid rgba(168, 137, 82, 0.2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+
+.parchment-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(231, 225, 213, 0.03) 1px, transparent 0);
+  background-size: 16px 16px;
+  pointer-events: none;
+}
+
+/* Realistic Manila Folder / Paper Slips */
+.manila-folder {
+  background: linear-gradient(135deg, #2b2219 0%, #1c1611 100%);
+  border: 2px solid #5a422d;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9), inset 0 1px 2px rgba(230, 180, 120, 0.2);
+}
+
+.paper-slip {
+  background: linear-gradient(180deg, #f4eee1 0%, #e8decb 100%);
+  color: #1a1714;
+  border: 1px solid #d4c5a9;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.paper-slip-dark {
+  background: linear-gradient(180deg, #181613 0%, #110f0d 100%);
+  color: #e7e1d5;
+  border: 1px solid rgba(168, 137, 82, 0.25);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+}
+
+/* Authentic Crimson & Gold Ink Stamps */
+.stamp-evidence-logged {
+  border: 3px double #9e2a2b;
+  color: #9e2a2b;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transform: rotate(-10deg);
+  mask-image: radial-gradient(circle, black 65%, transparent 100%);
+  text-shadow: 0 0 6px rgba(158, 42, 43, 0.3);
+  animation: stampImpact 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.stamp-priority {
+  border: 2px solid #b33939;
+  color: #b33939;
+  font-family: 'Courier Prime', monospace;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transform: rotate(6deg);
+}
+
+.stamp-classified {
+  border: 2px solid #a83232;
+  color: #a83232;
+  font-family: 'Cinzel', serif;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transform: rotate(-5deg);
+}
+
+@keyframes stampImpact {
+  0% {
+    transform: scale(2.2) rotate(-22deg);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) rotate(-10deg);
+    opacity: 0.95;
+  }
+}
+
+/* Floating Rewards Animation */
+@keyframes floatUpFade {
+  0% {
+    transform: translateY(0) scale(0.9);
+    opacity: 0;
+  }
+  20% {
+    transform: translateY(-8px) scale(1.05);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-28px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-40px) scale(0.95);
+    opacity: 0;
+  }
+}
+
+.animate-float-reward {
+  animation: floatUpFade 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Speedometer / Gauge Styling */
+.gauge-meter-bg {
+  stroke: rgba(85, 90, 96, 0.3);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+.gauge-meter-fill {
+  stroke: #A88952;
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s ease-in-out;
+}
+
+/* Cinematic Header Styling */
+.cinematic-header {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.typewriter-text {
+  font-family: 'Courier Prime', monospace;
+}
+
+/* Red Evidence Thread Glow */
+.evidence-thread {
+  stroke: #A82B2B;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 4px rgba(168, 43, 43, 0.7));
+}
+
+.evidence-thread-active {
+  stroke: #e63946;
+  stroke-width: 3.5;
+  filter: drop-shadow(0 0 8px rgba(230, 57, 70, 0.9));
+  animation: threadPulse 2s infinite ease-in-out;
+}
+
+@keyframes threadPulse {
+  0%, 100% { opacity: 0.8; stroke-width: 3; }
+  50% { opacity: 1; stroke-width: 4; }
+}
+
+/* Interactive 3D Hotspot pulse */
+.hotspot-pulse {
+  animation: hotspotPulse 2.5s infinite;
+}
+
+@keyframes hotspotPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(168, 137, 82, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(168, 137, 82, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(168, 137, 82, 0);
+  }
+}

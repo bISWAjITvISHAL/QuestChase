@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useGameStore } from '@/lib/store';
@@ -10,7 +10,6 @@ import {
   Flame,
   Volume2,
   VolumeX,
-  CloudRain,
   MapPin,
   Compass,
   CheckSquare,
@@ -29,8 +28,8 @@ import { AnimatedProgressBar } from '@/components/ui/AnimatedProgressBar';
 export function DetectiveHUD() {
   const pathname = usePathname();
   const { profile, setProfile, cases, activeCaseId, signOut } = useGameStore();
-  const [audioOn, setAudioOn] = useState(profile.settings?.audioEnabled ?? true);
-  const [rainOn, setRainOn] = useState(profile.settings?.ambienceEnabled ?? true);
+
+  const audioOn = profile.settings?.audioEnabled ?? true;
 
   const currentCase = cases.find((c) => c.id === activeCaseId) || cases[0];
   const gold = profile.gold || 0;
@@ -38,26 +37,15 @@ export function DetectiveHUD() {
 
   const handleToggleAudio = () => {
     const next = !audioOn;
-    setAudioOn(next);
-    soundEngine.setSoundEnabled(next);
     setProfile({
       settings: {
         ...profile.settings,
         audioEnabled: next,
       },
     });
-  };
-
-  const handleToggleRain = () => {
-    const next = !rainOn;
-    setRainOn(next);
-    soundEngine.setAmbienceEnabled(next);
-    setProfile({
-      settings: {
-        ...profile.settings,
-        ambienceEnabled: next,
-      },
-    });
+    if (next) {
+      soundEngine.playStampThud();
+    }
   };
 
   return (
@@ -146,27 +134,18 @@ export function DetectiveHUD() {
             <Flame className="w-3.5 h-3.5 text-amber-500 ml-0.5 shrink-0" />
           </div>
 
-          {/* Audio & Ambience Controls */}
-          <div className="hidden lg:flex items-center gap-1 bg-noir border border-steel/40 rounded p-1">
+          {/* Audio SFX Controls */}
+          <div className="hidden sm:flex items-center bg-noir border border-steel/40 rounded p-0.5">
             <button
               onClick={handleToggleAudio}
-              title={audioOn ? 'Mute Sound FX' : 'Enable Sound FX'}
-              aria-label={audioOn ? 'Mute Sound FX' : 'Enable Sound FX'}
-              className={`p-2 rounded transition cursor-pointer min-w-[32px] min-h-[32px] flex items-center justify-center ${
+              title={audioOn ? 'Sound Effects: ON (Click to Mute)' : 'Sound Effects: MUTED (Click to Unmute)'}
+              aria-label={audioOn ? 'Mute Sound Effects' : 'Enable Sound Effects'}
+              className={`px-2.5 py-1.5 rounded transition cursor-pointer min-h-[32px] flex items-center gap-1.5 text-[11px] font-cinematic ${
                 audioOn ? 'text-gold hover:bg-charcoal' : 'text-steel hover:text-parchment'
               }`}
             >
-              {audioOn ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-            </button>
-            <button
-              onClick={handleToggleRain}
-              title={rainOn ? 'Mute Rain Ambience' : 'Enable Rain Ambience'}
-              aria-label={rainOn ? 'Mute Rain Ambience' : 'Enable Rain Ambience'}
-              className={`p-2 rounded transition cursor-pointer min-w-[32px] min-h-[32px] flex items-center justify-center ${
-                rainOn ? 'text-blue-400 hover:bg-charcoal' : 'text-steel hover:text-parchment'
-              }`}
-            >
-              <CloudRain className="w-3.5 h-3.5" />
+              {audioOn ? <Volume2 className="w-3.5 h-3.5 text-gold" /> : <VolumeX className="w-3.5 h-3.5 text-steel" />}
+              <span className="text-[9px] uppercase tracking-wider">{audioOn ? 'SFX ON' : 'MUTED'}</span>
             </button>
           </div>
 

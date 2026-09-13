@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -28,8 +28,45 @@ import { soundEngine } from '@/lib/soundEngine';
 
 export default function LandingPage() {
   const router = useRouter();
-  const [soundActive, setSoundActive] = useState(false);
+  const [soundActive, setSoundActive] = useState(true);
   const [activeStep, setActiveStep] = useState(2);
+
+  // Sync audio state on mount / navigation and setup user gesture activation
+  useEffect(() => {
+    let initialActive = true;
+    try {
+      const saved = localStorage.getItem('casefile_audio_settings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.ambienceEnabled === 'boolean') {
+          initialActive = parsed.ambienceEnabled;
+        }
+      }
+    } catch {
+      // Ignored
+    }
+
+    setSoundActive(initialActive);
+    soundEngine.setSoundEnabled(initialActive);
+    soundEngine.setAmbienceEnabled(initialActive);
+
+    const handleFirstGesture = () => {
+      soundEngine.init();
+      window.removeEventListener('click', handleFirstGesture);
+      window.removeEventListener('keydown', handleFirstGesture);
+      window.removeEventListener('touchstart', handleFirstGesture);
+    };
+
+    window.addEventListener('click', handleFirstGesture);
+    window.addEventListener('keydown', handleFirstGesture);
+    window.addEventListener('touchstart', handleFirstGesture);
+
+    return () => {
+      window.removeEventListener('click', handleFirstGesture);
+      window.removeEventListener('keydown', handleFirstGesture);
+      window.removeEventListener('touchstart', handleFirstGesture);
+    };
+  }, []);
 
   // Interactive Live Demo Quest state
   const [demoQuests, setDemoQuests] = useState([
@@ -68,6 +105,14 @@ export default function LandingPage() {
     setSoundActive(next);
     soundEngine.setSoundEnabled(next);
     soundEngine.setAmbienceEnabled(next);
+    try {
+      localStorage.setItem(
+        'casefile_audio_settings',
+        JSON.stringify({ audioEnabled: next, ambienceEnabled: next, reducedMotion: false })
+      );
+    } catch {
+      // Ignored
+    }
   };
 
   const handleBeginInvestigation = () => {
@@ -129,10 +174,10 @@ export default function LandingPage() {
             <button
               onClick={handleToggleSound}
               className="hidden sm:flex items-center gap-1.5 bg-charcoal/80 border border-steel/40 text-parchment-dim hover:text-gold px-2.5 py-1.5 rounded text-[11px] font-cinematic transition"
-              title="Toggle Noir Rain Ambience"
+              title={soundActive ? 'Sound Effects: ON (Click to Mute)' : 'Sound Effects: MUTED (Click to Unmute)'}
             >
               {soundActive ? <Volume2 className="w-3.5 h-3.5 text-gold" /> : <VolumeX className="w-3.5 h-3.5 text-steel" />}
-              <span className="text-[10px]">{soundActive ? 'RAIN ON' : 'AUDIO'}</span>
+              <span className="text-[10px]">{soundActive ? 'SFX ON' : 'MUTED'}</span>
             </button>
 
             <Link
@@ -146,7 +191,7 @@ export default function LandingPage() {
               onClick={handleBeginInvestigation}
               className="bg-gradient-to-r from-gold to-gold-bright hover:from-gold-bright hover:to-gold text-noir font-cinematic font-bold text-xs py-2 px-4 rounded-sm shadow-gold transition active:scale-95 tracking-wider"
             >
-              START CASE #001
+              BEGIN YOUR JOURNEY
             </button>
           </div>
         </div>
@@ -183,7 +228,7 @@ export default function LandingPage() {
                 onClick={handleBeginInvestigation}
                 className="flex items-center gap-2.5 bg-gradient-to-r from-gold to-gold-bright hover:from-gold-bright hover:to-gold text-noir font-cinematic font-black py-3.5 px-7 rounded-sm shadow-gold transition-all duration-300 text-xs sm:text-sm tracking-wider active:scale-95 tactile-btn"
               >
-                <span>START CASE #001</span>
+                <span>BEGIN YOUR JOURNEY</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -581,7 +626,7 @@ export default function LandingPage() {
             onClick={handleBeginInvestigation}
             className="bg-gradient-to-r from-gold to-gold-bright hover:from-gold-bright hover:to-gold text-noir font-cinematic font-black py-4 px-10 rounded-sm shadow-gold transition-all duration-300 text-xs sm:text-sm tracking-widest active:scale-95 tactile-btn"
           >
-            START CASE #001
+            BEGIN YOUR JOURNEY
           </button>
         </div>
       </section>

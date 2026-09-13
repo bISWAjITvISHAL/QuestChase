@@ -20,11 +20,16 @@ import {
   FileSearch,
   Crosshair,
   Medal,
+  Volume2,
+  VolumeX,
+  Radio,
+  Sliders,
 } from 'lucide-react';
 import { RANKS } from '@/lib/initialData';
+import { soundEngine } from '@/lib/soundEngine';
 
 export default function CharacterProfilePage() {
-  const { profile, cases, tasks, achievements } = useGameStore();
+  const { profile, setProfile, cases, tasks, achievements } = useGameStore();
 
   const gold = profile.gold || 0;
   const currentRankInfo = RANKS.find((r) => r.rank === profile.rank) || RANKS[0];
@@ -148,6 +153,137 @@ export default function CharacterProfilePage() {
                   width: `${Math.min(100, ((profile.xp % 1000) / 1000) * 100)}%`,
                 }}
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Environment & Audio Dispatch Settings (Accessible for Mobile & Desktop) */}
+        <div className="bg-[#121316] border-2 border-gold/40 rounded p-5 sm:p-6 shadow-dossier">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-steel/20 pb-3 mb-5">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded bg-[#18191c] border border-gold/40 flex items-center justify-center text-gold">
+                <Sliders className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-[10px] font-cinematic font-bold text-crimson-bright uppercase tracking-wider">
+                  DISPATCH CONSOLE • PREFERENCES
+                </div>
+                <h2 className="text-base sm:text-lg font-cinematic font-bold text-parchment tracking-wide">
+                  ENVIRONMENT & AUDIO SETTINGS
+                </h2>
+              </div>
+            </div>
+            <span className="text-[10px] typewriter-text text-steel">
+              100% PROCEDURAL SYNTHESIS • OFFLINE CAPABLE
+            </span>
+          </div>
+
+          <div className="bg-[#0b0c0e] border border-steel/30 rounded-lg p-5 flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div
+                  className={`w-11 h-11 rounded-lg border flex items-center justify-center shrink-0 transition-colors ${
+                    profile.settings?.audioEnabled ?? true
+                      ? 'bg-gold/15 border-gold text-gold shadow-gold'
+                      : 'bg-[#18191c] border-steel/30 text-steel'
+                  }`}
+                >
+                  {profile.settings?.audioEnabled ?? true ? (
+                    <Volume2 className="w-5 h-5" />
+                  ) : (
+                    <VolumeX className="w-5 h-5" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-cinematic font-bold text-parchment uppercase tracking-wide">
+                    Detective Sound Effects (SFX)
+                  </h3>
+                  <p className="text-xs text-parchment-dim typewriter-text mt-0.5 leading-relaxed max-w-xl">
+                    100% real-time Web Audio procedural synthesis. Features heavy rubber stamp impacts, mechanical typewriter keystrokes, clue discovery chimes, red yarn pin snaps, and case-closed victory fanfares.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <span className={`text-xs font-cinematic font-bold tracking-wider ${profile.settings?.audioEnabled ?? true ? 'text-gold' : 'text-steel'}`}>
+                  {profile.settings?.audioEnabled ?? true ? 'SFX ENABLED' : 'MUTED'}
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={profile.settings?.audioEnabled ?? true}
+                  aria-label="Toggle Detective Sound Effects"
+                  onClick={() => {
+                    const next = !(profile.settings?.audioEnabled ?? true);
+                    setProfile({
+                      settings: {
+                        ...profile.settings,
+                        audioEnabled: next,
+                      },
+                    });
+                    if (next) {
+                      soundEngine.playStampThud();
+                    }
+                  }}
+                  className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-gold min-w-[56px] min-h-[32px] ${
+                    profile.settings?.audioEnabled ?? true
+                      ? 'bg-gold/20 border-gold'
+                      : 'bg-[#18191c] border-steel/40'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full shadow-md transition duration-200 ease-in-out mt-0.5 ml-0.5 ${
+                      profile.settings?.audioEnabled ?? true
+                        ? 'translate-x-6 bg-gold'
+                        : 'translate-x-0 bg-steel'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Interactive Sound Test Matrix */}
+            <div className="pt-3 border-t border-steel/20 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[10px] typewriter-text text-steel uppercase tracking-wider">
+                AUDIO SYNTHESIS TEST CONSOLE:
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => soundEngine.playStampThud()}
+                  className="px-2.5 py-1.5 rounded bg-[#16171b] border border-steel/40 text-[11px] font-cinematic text-parchment hover:border-gold hover:text-gold active:scale-95 transition min-h-[30px]"
+                >
+                  Rubber Stamp
+                </button>
+                <button
+                  type="button"
+                  onClick={() => soundEngine.playTypewriter()}
+                  className="px-2.5 py-1.5 rounded bg-[#16171b] border border-steel/40 text-[11px] font-cinematic text-parchment hover:border-gold hover:text-gold active:scale-95 transition min-h-[30px]"
+                >
+                  Typewriter Key
+                </button>
+                <button
+                  type="button"
+                  onClick={() => soundEngine.playClueFound()}
+                  className="px-2.5 py-1.5 rounded bg-[#16171b] border border-steel/40 text-[11px] font-cinematic text-parchment hover:border-gold hover:text-gold active:scale-95 transition min-h-[30px]"
+                >
+                  Clue Chime
+                </button>
+                <button
+                  type="button"
+                  onClick={() => soundEngine.playThreadConnected()}
+                  className="px-2.5 py-1.5 rounded bg-[#16171b] border border-steel/40 text-[11px] font-cinematic text-parchment hover:border-gold hover:text-gold active:scale-95 transition min-h-[30px]"
+                >
+                  Red Thread Snap
+                </button>
+                <button
+                  type="button"
+                  onClick={() => soundEngine.playPaperRustle()}
+                  className="px-2.5 py-1.5 rounded bg-[#16171b] border border-steel/40 text-[11px] font-cinematic text-parchment hover:border-gold hover:text-gold active:scale-95 transition min-h-[30px]"
+                >
+                  Paper Rustle
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -177,6 +177,31 @@ export const useGameStore = create<GameState>((set, get) => ({
   initGame: async () => {
     if (typeof window === 'undefined') return;
 
+    // Synchronize initial audio settings from local storage if available for instant responsive UX
+    try {
+      const savedSettingsRaw = localStorage.getItem('casefile_audio_settings');
+      if (savedSettingsRaw) {
+        const parsed = JSON.parse(savedSettingsRaw);
+        if (typeof parsed.audioEnabled === 'boolean') {
+          soundEngine.setSoundEnabled(parsed.audioEnabled);
+        }
+        if (typeof parsed.ambienceEnabled === 'boolean') {
+          soundEngine.setAmbienceEnabled(parsed.ambienceEnabled);
+        }
+        set((state) => ({
+          profile: {
+            ...state.profile,
+            settings: {
+              ...state.profile.settings,
+              ...parsed,
+            },
+          },
+        }));
+      }
+    } catch {
+      // Ignored
+    }
+
     set({ isLoading: true, errorMessage: null });
 
     try {
@@ -197,7 +222,24 @@ export const useGameStore = create<GameState>((set, get) => ({
           ]);
 
           if (profileRes.status === 'fulfilled' && profileRes.value.profile) {
-            set({ profile: profileRes.value.profile });
+            const fetchedProfile = profileRes.value.profile as DetectiveProfile;
+            const settings = {
+              audioEnabled: fetchedProfile.settings?.audioEnabled ?? true,
+              ambienceEnabled: fetchedProfile.settings?.ambienceEnabled ?? true,
+              reducedMotion: fetchedProfile.settings?.reducedMotion ?? false,
+            };
+            fetchedProfile.settings = settings;
+            set({ profile: fetchedProfile });
+
+            // Synchronize sound engine immediately with authenticated user's persisted profile settings
+            soundEngine.setSoundEnabled(settings.audioEnabled);
+            soundEngine.setAmbienceEnabled(settings.ambienceEnabled);
+
+            try {
+              localStorage.setItem('casefile_audio_settings', JSON.stringify(settings));
+            } catch {
+              // Ignored
+            }
           }
 
           if (tasksRes.status === 'fulfilled' && Array.isArray(tasksRes.value.tasks)) {
@@ -303,17 +345,43 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   setProfile: (updates) => {
-    set((state) => ({
-      profile: { ...state.profile, ...updates },
-    }));
+    set((state) => {
+      const mergedSettings = updates.settings
+        ? { ...state.profile.settings, ...updates.settings }
+        : state.profile.settings;
+
+      if (updates.settings) {
+        if (typeof updates.settings.audioEnabled === 'boolean') {
+          soundEngine.setSoundEnabled(updates.settings.audioEnabled);
+        }
+        if (typeof updates.settings.ambienceEnabled === 'boolean') {
+          soundEngine.setAmbienceEnabled(updates.settings.ambienceEnabled);
+        }
+        try {
+          localStorage.setItem('casefile_audio_settings', JSON.stringify(mergedSettings));
+        } catch {
+          // Ignored
+        }
+      }
+
+      return {
+        profile: {
+          ...state.profile,
+          ...updates,
+          ...(updates.settings ? { settings: mergedSettings } : {}),
+        },
+      };
+    });
 
     // Sync to backend if authenticated
-    apiFetch('/api/character', {
-      method: 'PATCH',
-      body: JSON.stringify(updates),
-    }).catch((err) => {
-      console.error('Failed to sync profile update:', err);
-    });
+    if (get().isAuthenticated) {
+      apiFetch('/api/character', {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+      }).catch((err) => {
+        console.error('Failed to sync profile update:', err);
+      });
+    }
   },
 
   addTask: async (taskInput) => {

@@ -79,10 +79,32 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (body.settings !== undefined && typeof body.settings === 'object' && body.settings !== null) {
+      // Fetch existing profile settings to ensure partial updates do not overwrite other settings
+      const { data: currentProfile } = await client
+        .from('profiles')
+        .select('settings')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const existingSettings = (currentProfile?.settings as {
+        audioEnabled?: boolean;
+        ambienceEnabled?: boolean;
+        reducedMotion?: boolean;
+      }) || { audioEnabled: true, ambienceEnabled: true, reducedMotion: false };
+
       updatePayload.settings = {
-        audioEnabled: Boolean(body.settings.audioEnabled ?? true),
-        ambienceEnabled: Boolean(body.settings.ambienceEnabled ?? true),
-        reducedMotion: Boolean(body.settings.reducedMotion ?? false),
+        audioEnabled:
+          typeof body.settings.audioEnabled === 'boolean'
+            ? body.settings.audioEnabled
+            : (existingSettings.audioEnabled ?? true),
+        ambienceEnabled:
+          typeof body.settings.ambienceEnabled === 'boolean'
+            ? body.settings.ambienceEnabled
+            : (existingSettings.ambienceEnabled ?? true),
+        reducedMotion:
+          typeof body.settings.reducedMotion === 'boolean'
+            ? body.settings.reducedMotion
+            : (existingSettings.reducedMotion ?? false),
       };
     }
 

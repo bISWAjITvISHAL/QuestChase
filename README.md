@@ -1,163 +1,1488 @@
-# QUESTCHASE
+# QuestChase
 
-> **"Complete your quests. Follow the clues. Solve the case."**
+> **Complete your quests. Follow the clues. Solve the case.**
 
----
+QuestChase is a full-stack **gamified productivity + detective mystery RPG**. It converts real-world tasks into quests, rewards users with XP and Gold, and uses those rewards to unlock forensic investigations, evidence, deductions, equipment, achievements, and case progression.
 
-## 1. Product Concept
+## Live Demo
 
-**QuestChase** is a gamified productivity application designed as a premium cinematic detective murder-mystery game.
+**Production:** https://quest-chase.vercel.app/
 
-Instead of presenting real-world to-do items as mundane tasks, QuestChase turns them into high-stakes investigative quests.
+## Demo Credentials
 
-### The Central Gameplay Loop:
-$$\text{REAL-LIFE TASK} \rightarrow \text{QUEST} \rightarrow \text{COMPLETION} \rightarrow \text{XP + GOLD + ATTRIBUTE XP} \rightarrow \text{INVESTIGATION} \rightarrow \text{CLUES} \rightarrow \text{EVIDENCE} \rightarrow \text{DEDUCTION} \rightarrow \text{CASE SOLVED}$$
+Use the following account to explore the deployed application:
 
-**The user's real-life productivity literally powers the forensic murder-mystery investigation.**
-
----
-
-## 2. Full-Stack Architecture & Data Persistence
-
-In compliance with hackathon rules, **localStorage is NOT used as primary storage**. 
-
-**Supabase / PostgreSQL** is the single authoritative source of persistent game state.
-
-### Architecture Flow:
-$$\text{Supabase PostgreSQL} \xrightarrow{\text{RLS Policies}} \text{Authenticated Next.js Server API} \xrightarrow{\text{Bearer JWT}} \text{Client Data Layer} \rightarrow \text{Zustand (In-Memory Session State)} \rightarrow \text{Tactile UI / 3D Canvas}$$
-
-### Authoritative Persistent Entities in PostgreSQL:
-1. **Profiles (`profiles`)**: Detective name, badge ID, level, non-linear XP, Gold, streak, 4 attributes, solve counters. Direct client mutation prohibited via trigger `protect_profile_gameplay_columns`.
-2. **Quests (`tasks`)**: User-scoped real-world tasks with server-calculated rewards and completion timestamps.
-3. **Case Progress (`case_progress`)**: Active chapter, completion percentage, solved state, with database range constraint `0 <= progress_percentage <= 100`.
-4. **Discovered Evidence (`discovered_evidence`)**: Unlocked forensic clues and 2D/3D board coordinates ($X, Y$).
-5. **Executed Actions (`executed_actions`)**: Idempotent records of paid forensic examinations.
-6. **Evidence Connections (`evidence_connections`)**: Red yarn links and verified contradiction flags (connecting undiscovered clues is strictly prevented by server validation).
-7. **Equipment & Inventory (`user_inventory`)**: Requisitioned forensic gear and active field kit loadout (enforces max 3 equipped items).
-8. **Achievements (`user_achievements`)**: Canonical detective achievements evaluated strictly from real database records via `check_and_unlock_achievements`.
-9. **Reward Transactions Audit Ledger (`reward_transactions`)**: Append-only transactional audit trail recording every XP and Gold credit and debit with source attribution (`QUEST_COMPLETION`, `INVESTIGATION_ACTION`, `CASE_SOLVED`, `ACHIEVEMENT_UNLOCKED`, `LEVEL_UP_BONUS`, `EQUIPMENT_PERK`). Strict RLS blocks client inserts/updates.
+| Field    | Demo Value          |
+| -------- | ------------------- |
+| Email    | `test123@gmail.com` |
+| Password | `test123456`        |
 
 ---
 
-## 3. Real Supabase Authentication & Row-Level Security (RLS)
+# Table of Contents
 
-- **Identity Provider**: Supabase Auth (JWT tokens, password encryption, automatic session management).
-- **Protected Routes**: `/desk`, `/headquarters`, `/tasks`, `/investigate/[caseId]`, `/board/[caseId]`, `/character`, `/locker`, `/cases`, `/achievements`, `/settings`.
-- **Row-Level Security**: Every table enforces strict `auth.uid() = user_id` or `auth.uid() = id`.
-- **Client Mutation Lockdown**: Direct client `UPDATE` on gameplay-critical profile columns (`xp`, `gold`, `level`, `rank`, `streak`, `attributes`) is blocked at the database engine level via the `protect_profile_gameplay_columns` PostgreSQL trigger.
-- **Transaction-Atomic RPCs**: All gameplay state mutations execute through secure `SECURITY DEFINER` stored procedures running inside atomic database transactions with row-level locks (`FOR UPDATE`):
-  - `complete_quest_atomic`: Date-based streak calculation, attribute XP rewards, non-linear level curve calculation, +50 Gold level-up bonuses, equipment perk boosts (`eq_trenchcoat` +20% gold, `eq_magnifying_glass` +15% perception growth), and automatic achievement checks.
-  - `execute_investigation_action_atomic`: Scene object action execution with attribute requirement verification inside the RPC, chapter progression gates, gold deduction, equipment discounts (`eq_master_key` 15% discount, `eq_field_camera` +20 bonus XP), and ledger logging.
-  - `solve_case_atomic`: Canonical case solution commit with strict 500 XP / 250 Gold rewards (with `eq_antique_typewriter` +50% Gold bonus), complete idempotency, and audit logging.
-  - `purchase_equipment_atomic` & `toggle_equip_item_atomic`: Persistent armory inventory management with strict 3-item field kit limit enforcement.
-  - `check_and_unlock_achievements`: Server-authoritative achievement verification evaluating real database records across tasks, evidence, case progress, and connections—completely eliminating client-side self-awarding.
-
----
-
-## 4. Zero Solution Leakage & Integrity Model
-
-- **No Client Secrets**: Case solutions, culprit suspect identities (`isCulprit`), required clue IDs, and final deduction pillars are completely stripped from client bundles, client TypeScript types, and public API responses.
-- **Server-Only Validation**: Final accusations are processed by `src/lib/serverCaseSolutions.ts` on the server using deterministic identifier matching (`whoId`, `whenId`, `howId`, `whyId`).
-- **Prerequisite Case Gating**: Case #002 (The Silent Witness) is strictly locked on both backend APIs and the client interface until Case #001 (The Blackwood Murder) is officially solved.
-
----
-
-## 5. Core Game & Economy Mechanics
-
-### 1. The 4 Canonical Attributes:
-- **INTELLIGENCE**: Powers digital forensics, laptop data recovery, and pattern recognition.
-- **PERCEPTION**: Powers physical crime scene searches, micro-clues, and fingerprint matching.
-- **DISCIPLINE**: Powers interrogation, alibi deconstruction, and timeline reconstruction.
-- **RESILIENCE**: Powers high-pressure interrogation composure, mental fortitude, and undercover endurance.
-
-### 2. Difficulty Tiers & Server Reward Progression:
-- **Tier E**: +40 XP, +10 Gold, +8 Attribute XP
-- **Tier D**: +60 XP, +15 Gold, +12 Attribute XP
-- **Tier C**: +80 XP, +20 Gold, +15 Attribute XP
-- **Tier B**: +120 XP, +35 Gold, +18 Attribute XP
-- **Tier A**: +180 XP, +50 Gold, +25 Attribute XP
-
-### 3. Non-Linear Level Curve:
-$$\text{XP Required for Level } L = \text{round}(100 \times L^{1.35})$$
-
-### 4. Gold Economy & Forensic Actions:
-Gold is the primary fuel for investigation actions:
-- *Search The Study* (60 Gold, Perception 3)
-- *Analyze Laptop* (80 Gold, Intelligence 3 or Discipline 3)
-- *Examine Wall Safe* (50 Gold, Perception 3)
-- *Search Garden* (50 Gold, Perception 4)
-- *Reconstruct Timeline* (90 Gold, Discipline 3 or Intelligence 3)
-- *Interview Marcus Vance* (70 Gold, Discipline 4)
-- *Inspect Library & Dispensary* (80 Gold, Perception 4)
+* [Overview](#overview)
+* [Core Gameplay Loop](#core-gameplay-loop)
+* [Features](#features)
+* [Application Structure](#application-structure)
+* [Architecture](#architecture)
+* [Technology Stack](#technology-stack)
+* [Frontend](#frontend)
+* [Backend and API](#backend-and-api)
+* [Database and Security](#database-and-security)
+* [Game Systems](#game-systems)
+* [Case Investigation](#case-investigation)
+* [3D and Audio Systems](#3d-and-audio-systems)
+* [Project File Structure](#project-file-structure)
+* [Environment Variables](#environment-variables)
+* [Local Development](#local-development)
+* [Database Setup](#database-setup)
+* [Build and Deployment](#build-and-deployment)
+* [Available Scripts](#available-scripts)
+* [Security and Integrity](#security-and-integrity)
+* [Future Scope](#future-scope)
 
 ---
 
-## 6. Case #001: The Blackwood Murder
+# Overview
 
-- **Victim**: Lord Arthur Blackwood (Found dead at mahogany desk at 22:45 PM).
-- **Starting State**: Starts **completely unsolved** (0 pre-discovered clues, unexecuted actions).
-- **Suspects**:
-  1. *Marcus Vance* (Nephew & Primary Estate Executor)
-  2. *Dr. Elena Sterling* (Personal Physician & Toxicologist)
-  3. *Victor Ward* (Business Partner & Ironworks Director)
-  4. *Clara Giles* (Estate Archivist & Secret Heiress)
-- **Key Contradiction**: Marcus testifies he departed the estate at 22:00 PM, but the Gatekeeper Logbook officially recorded his carriage departing at 22:31 PM.
-- **Murder Method**: Potassium cyanide laced into Lord Arthur's fountain pen nib and crystal scotch tumbler.
-- **Motive**: Interception of codicil transferring 80% shares to Clara Giles and urgent debt to dockside bookmakers.
-- **Canonical Reward**: Authoritative **500 XP and 250 Gold** upon verified accusation.
+QuestChase combines productivity software with an RPG-style progression system and a detective investigation experience.
+
+Instead of treating a to-do list as a normal checklist, QuestChase turns real-world productivity into a detective RPG.
+
+```text
+Real-world goal
+      ↓
+     Quest
+      ↓
+Complete the quest
+      ↓
+   XP + Gold
+      ↓
+Character progression
+      ↓
+Spend Gold on investigation
+      ↓
+Discover evidence
+      ↓
+Connect evidence
+      ↓
+Make a deduction
+      ↓
+Solve the case
+```
+
+The application currently centers around **Case #001 — The Blackwood Murder**.
 
 ---
 
-## 7. Technology Stack
+# Core Gameplay Loop
 
-- **Framework**: Next.js 14 (App Router, Server Actions, Route Handlers, TypeScript)
-- **Database & Auth**: PostgreSQL / Supabase with Row-Level Security (RLS) & Atomic Stored Procedures
-- **Styling**: Tailwind CSS + Custom Tactile Noir Design System
-- **3D Graphics**: Three.js, `@react-three/fiber`, `@react-three/drei`
-- **Audio Engine**: Zero-dependency Web Audio API procedural synthesizer (typewriter clicks, stamp impact, paper rustle, yarn snap, rain ambience)
-- **State Management**: Zustand (in-memory active session layer with server synchronization)
-- **Animations**: Canvas-Confetti, CSS Keyframe Stamp Animations, Speedometer Gauge Needle Transitions
+## 1. Create a Quest
+
+Users can create real-world tasks with:
+
+* Title
+* Description
+* Category
+* Difficulty
+* Priority
+* Due date
+
+## 2. Complete the Quest
+
+Completing a quest updates the user's authoritative game state on the backend.
+
+Rewards are calculated from the task's difficulty rather than trusting reward values sent by the browser.
+
+## 3. Earn XP, Gold and Attribute Progress
+
+Quest completion can provide:
+
+* XP
+* Gold
+* Attribute progression
+* Streak progression
+* Level progression
+* Achievement progress
+
+## 4. Investigate
+
+Gold can be used to perform investigation actions in the crime scene.
+
+Investigation actions may require:
+
+* Gold
+* Detective rank
+* Intelligence
+* Perception
+* Discipline
+* Resilience
+* Chapter progression
+
+## 5. Discover Evidence
+
+Investigation actions unlock evidence items.
+
+Evidence can include:
+
+* Physical evidence
+* Documents
+* Digital evidence
+* Testimony
+* Timeline information
+* Contradictions
+
+## 6. Build the Evidence Board
+
+Discovered evidence can be positioned and connected on the investigation board.
+
+The board uses visual connections to represent relationships between clues.
+
+## 7. Make the Final Deduction
+
+The final accusation uses four deduction pillars:
+
+* **WHO**
+* **WHEN**
+* **HOW**
+* **WHY**
+
+The server validates the canonical answer and verifies that the required supporting evidence was actually discovered.
+
+## 8. Solve the Case
+
+A correct solution awards the case reward and prevents duplicate rewards.
 
 ---
 
-## 8. Setup & Running Locally
+# Features
 
-### Prerequisites:
-- Node.js 18+ or 20+
-- npm
-- Supabase account (or local PostgreSQL instance)
+## Productivity / Quest System
 
-### Installation:
+* Create quests
+* Edit quests
+* Delete quests
+* Complete quests
+* Difficulty-based rewards
+* Priority system
+* Category-based attribute progression
+* Due dates
+* Daily streak tracking
+* XP progression
+* Gold economy
+
+## Detective RPG System
+
+QuestChase contains four core attributes:
+
+| Attribute    | Gameplay Role                                          |
+| ------------ | ------------------------------------------------------ |
+| Intelligence | Digital forensics, analysis and pattern recognition    |
+| Perception   | Physical evidence and crime-scene investigation        |
+| Discipline   | Interrogation, timeline reconstruction and consistency |
+| Resilience   | High-pressure investigation and endurance              |
+
+The player also has:
+
+* Level
+* Rank
+* XP
+* Gold
+* Streak
+* Completed quest count
+* Solved case count
+* Discovered evidence count
+* Equipment
+* Achievements
+
+## Investigation System
+
+* Interactive 3D crime scene
+* Investigation hotspots
+* Gold-based forensic actions
+* Attribute requirements
+* Chapter gating
+* Evidence discovery
+* Investigation reports
+* Evidence board
+* Red-thread connections
+* Contradiction detection
+* Final accusation system
+
+## Equipment / Locker
+
+The application includes an equipment system where users can acquire and equip detective equipment.
+
+Equipment can provide gameplay perks such as:
+
+* Additional Gold
+* Additional attribute growth
+* Investigation discounts
+* Bonus XP
+* Case-solution bonuses
+
+## Achievements
+
+Achievements are evaluated from authoritative game state rather than simply trusting client-side progress.
+
+Achievement categories include:
+
+* Investigation
+* Productivity
+* Deduction
+* Mastery
+
+## Cinematic UI
+
+QuestChase uses a detective-noir visual language with:
+
+* Dossier-style panels
+* Parchment textures
+* Crimson accents
+* Gold highlights
+* Cinematic typography
+* Animated transitions
+* Level-up cinematics
+* Case-solved cinematics
+* Toast notifications
+* Animated progress bars
+* Animated numbers
+* Confetti effects
+* Typewriter-style audio effects
+
+---
+
+# Application Structure
+
+```text
+QuestChase
+│
+├── Landing Page
+│   └── Product introduction / gameplay overview
+│
+├── Authentication
+│   ├── Login
+│   └── Register
+│
+├── Detective Headquarters
+│   ├── Tasks / Quests
+│   ├── Character
+│   ├── Cases
+│   ├── Locker
+│   └── Achievements
+│
+├── Investigation
+│   ├── Case dossier
+│   ├── 3D crime scene
+│   ├── Investigation actions
+│   ├── Evidence discovery
+│   └── Chapter progression
+│
+└── Evidence Board
+    ├── Evidence cards
+    ├── Evidence positioning
+    ├── Red-thread connections
+    └── Final accusation
+```
+
+---
+
+# Architecture
+
+QuestChase follows a client/server architecture using Next.js and Supabase.
+
+```text
+                         ┌─────────────────────┐
+                         │   Next.js Frontend  │
+                         │ React + TypeScript  │
+                         └──────────┬──────────┘
+                                    │
+                         Zustand / API Client
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │ Next.js Route APIs  │
+                         │ /api/...            │
+                         └──────────┬──────────┘
+                                    │
+                              Authenticated
+                              Supabase session
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │ Supabase PostgreSQL │
+                         │ RLS + RPC Functions │
+                         └──────────┬──────────┘
+                                    │
+                         Authoritative game state
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │ Player Progression  │
+                         │ Quests / Evidence   │
+                         │ Inventory / Cases   │
+                         └─────────────────────┘
+```
+
+### Client Responsibilities
+
+The React client handles:
+
+* Rendering
+* Navigation
+* Animation
+* 3D scenes
+* Interaction
+* Local UI state
+* Audio effects
+* User interface presentation
+
+### Server Responsibilities
+
+The server/database handles authoritative:
+
+* Authentication checks
+* Quest completion
+* XP rewards
+* Gold rewards
+* Attribute progression
+* Streak calculation
+* Investigation purchases
+* Evidence discovery
+* Evidence connections
+* Equipment purchases/equipping
+* Achievement unlocking
+* Case solving
+
+---
+
+# Technology Stack
+
+## Core Framework
+
+### Next.js
+
+**Version:** `14.2.23`
+
+Used for:
+
+* App Router
+* React Server/Client Components
+* Route Handlers
+* Middleware
+* Server-side functionality
+* Application routing
+
+## Frontend
+
+### React
+
+**Version:** `18.3.1`
+
+Used for building the application's component-based user interface.
+
+### TypeScript
+
+**Version:** `5.4.5`
+
+Used for:
+
+* Type safety
+* Game models
+* API types
+* Component props
+* Application logic
+
+### Tailwind CSS
+
+**Version:** `3.4.4`
+
+Used for:
+
+* Responsive UI
+* Styling
+* Layout
+* Custom detective/noir design system
+* Animations and visual effects
+
+### PostCSS
+
+**Version:** `8.4.38`
+
+Used as part of the CSS processing pipeline.
+
+### Autoprefixer
+
+**Version:** `10.4.19`
+
+Used for browser-compatible CSS output.
+
+---
+
+# State Management
+
+## Zustand
+
+**Version:** `4.5.2`
+
+Zustand is used for client-side state management.
+
+It manages application state including:
+
+* Player profile
+* Tasks
+* Cases
+* Evidence
+* Equipment
+* Achievements
+* Notifications
+* UI state
+* Cinematic state
+
+---
+
+# Backend and Database
+
+## Supabase
+
+QuestChase uses Supabase for backend infrastructure.
+
+Packages:
+
+```text
+@supabase/supabase-js
+@supabase/ssr
+```
+
+Supabase provides:
+
+* Authentication
+* PostgreSQL database
+* Session management
+* Server/client database integration
+* Row Level Security
+
+## PostgreSQL
+
+The persistent game state is stored in PostgreSQL.
+
+The database contains:
+
+* Tables
+* Relationships
+* Foreign keys
+* Unique constraints
+* Check constraints
+* Triggers
+* Row Level Security policies
+* PostgreSQL functions
+* Transactional game operations
+
+## PL/pgSQL
+
+PostgreSQL functions are used for important server-authoritative operations.
+
+Important functions include:
+
+```text
+complete_quest_atomic
+execute_investigation_action_atomic
+solve_case_atomic
+create_evidence_connection_atomic
+purchase_equipment_atomic
+toggle_equip_item_atomic
+check_and_unlock_achievements
+```
+
+---
+
+# 3D Graphics
+
+## Three.js
+
+**Version:** `0.160.0`
+
+Three.js is used to create interactive 3D environments.
+
+## React Three Fiber
+
+**Version:** `8.16.8`
+
+React Three Fiber integrates Three.js with React.
+
+## React Three Drei
+
+**Version:** `9.105.6`
+
+Drei provides reusable helpers and components for React Three Fiber.
+
+## Three.js Type Definitions
+
+```text
+@types/three
+Version: 0.160.0
+```
+
+---
+
+# Animation
+
+## Framer Motion
+
+**Version:** `11.2.10`
+
+Used for:
+
+* Page transitions
+* Modal animations
+* Card animations
+* Cinematic effects
+* Interactive UI
+* Progress animations
+
+---
+
+# Icons
+
+## Lucide React
+
+**Version:** `0.395.0`
+
+Used throughout the interface for:
+
+* Navigation icons
+* Buttons
+* Actions
+* Status indicators
+* Gameplay controls
+
+---
+
+# Visual Effects
+
+## Canvas Confetti
+
+**Version:** `1.9.3`
+
+Used for celebration effects such as:
+
+* Quest completion
+* Level-up moments
+* Case completion
+* Major rewards
+
+---
+
+# Styling Utilities
+
+## clsx
+
+**Version:** `2.1.1`
+
+Used for conditional CSS class composition.
+
+## tailwind-merge
+
+**Version:** `2.3.0`
+
+Used to merge Tailwind CSS utility classes without conflicting styles.
+
+---
+
+# Audio System
+
+## Web Audio API
+
+QuestChase contains a custom procedural audio system using the browser's native **Web Audio API**.
+
+This avoids requiring external audio assets for the implemented sound effects.
+
+The sound engine provides effects such as:
+
+* Typewriter clicks
+* Button clicks
+* Evidence discovery sounds
+* Red-thread connection sounds
+* Paper rustling
+* Detective stamp effects
+* Level-up fanfare
+* Case-solved fanfare
+
+Implementation:
+
+```text
+src/lib/soundEngine.ts
+```
+
+---
+
+# Development Tooling
+
+## Node.js / npm
+
+QuestChase is an npm-based Next.js application.
+
+## ESLint
+
+Versions:
+
+```text
+eslint: 8.57.1
+eslint-config-next: 14.2.23
+```
+
+Used for code quality and linting.
+
+## Vercel
+
+The production application is deployed using Vercel.
+
+Live application:
+
+https://quest-chase.vercel.app/
+
+---
+
+# Backend API
+
+QuestChase uses Next.js Route Handlers under:
+
+```text
+src/app/api/
+```
+
+## Tasks
+
+```text
+GET    /api/tasks
+POST   /api/tasks
+
+PATCH  /api/tasks/[id]
+DELETE /api/tasks/[id]
+
+POST   /api/tasks/[id]/complete
+```
+
+## Character
+
+```text
+GET /api/character
+```
+
+## Inventory
+
+```text
+GET /api/inventory
+```
+
+## Cases
+
+```text
+GET /api/cases
+```
+
+## Investigation
+
+```text
+POST /api/cases/[caseId]/actions
+POST /api/cases/[caseId]/connections
+POST /api/cases/[caseId]/deduction
+PATCH /api/cases/[caseId]/board-positions
+```
+
+## Achievements
+
+```text
+GET /api/achievements
+```
+
+---
+
+# Database and Security
+
+Database migrations are located inside:
+
+```text
+supabase/migrations/
+```
+
+Current migrations:
+
+```text
+001_initial_schema.sql
+002_security_and_game_integrity.sql
+003_drop_old_investigation_rpc_and_enforce_chapter_integrity.sql
+004_fix_quest_completion_and_security.sql
+```
+
+## Main Database Entities
+
+The application stores persistent data for:
+
+```text
+profiles
+tasks
+case_progress
+discovered_evidence
+evidence_connections
+executed_actions
+user_inventory
+user_achievements
+reward_transactions
+```
+
+---
+
+# Row Level Security
+
+Supabase Row Level Security protects user-specific records.
+
+Policies are based on:
+
+```sql
+auth.uid()
+```
+
+This ensures users cannot legitimately access another user's private game state.
+
+---
+
+# Server-Authoritative Rewards
+
+QuestChase does not rely exclusively on client-side values for important rewards.
+
+For example, quest rewards are calculated from the stored difficulty.
+
+```text
+Difficulty    XP       Gold
+--------------------------------
+S             240      70
+A             180      50
+B             120      35
+C              80      20
+D              60      15
+E              40      10
+```
+
+The client cannot simply decide:
+
+```text
+"Give me 100000 Gold"
+```
+
+and expect the database to accept it.
+
+The server/database determines the valid reward.
+
+---
+
+# Game Systems
+
+## XP and Leveling
+
+QuestChase uses a progressive leveling model.
+
+The XP requirement is approximately:
+
+```text
+XP required ≈ round(100 × level^1.35)
+```
+
+This makes higher levels increasingly difficult to reach.
+
+---
+
+# Difficulty Rewards
+
+| Difficulty |  XP | Gold | Base Attribute Gain |
+| ---------- | --: | ---: | ------------------: |
+| S          | 240 |   70 |                  35 |
+| A          | 180 |   50 |                  25 |
+| B          | 120 |   35 |                  18 |
+| C          |  80 |   20 |                  15 |
+| D          |  60 |   15 |                  12 |
+| E          |  40 |   10 |                   8 |
+
+---
+
+# Category → Attribute Mapping
+
+```text
+Coding
+   ↓
+Intelligence
+
+Reading
+   ↓
+Perception
+
+Fitness / Study
+   ↓
+Discipline
+
+Other categories
+   ↓
+Resilience
+```
+
+---
+
+# Streak System
+
+The server calculates daily activity streaks.
+
+```text
+First activity
+      ↓
+Streak starts
+
+Previous day active
+      ↓
+Streak + 1
+
+Same day activity
+      ↓
+Streak maintained
+
+Missed day
+      ↓
+Streak resets to 1
+```
+
+---
+
+# Gold Economy
+
+Gold is the main investigation currency.
+
+Gold can be used for:
+
+* Forensic actions
+* Investigation actions
+* Detective equipment
+* Gameplay upgrades
+
+Important transactions are validated server-side.
+
+---
+
+# Case Investigation
+
+## Case #001 — The Blackwood Murder
+
+The primary investigation currently available is:
+
+**The Blackwood Murder**
+
+### Victim
+
+Lord Arthur Blackwood
+
+### Suspects
+
+* Marcus Vance
+* Dr. Elena Sterling
+* Victor Ward
+* Clara Giles
+
+### Investigation Components
+
+The case contains:
+
+* Multiple chapters
+* Crime-scene actions
+* Evidence discovery
+* Suspect information
+* Timeline reconstruction
+* Contradictions
+* Evidence-board connections
+* Final deduction
+
+---
+
+# Final Deduction
+
+The final accusation consists of four components:
+
+```text
+WHO
+WHEN
+HOW
+WHY
+```
+
+The server verifies:
+
+1. The submitted identifiers.
+2. The canonical case solution.
+3. The required evidence.
+4. The user's investigation progress.
+5. Whether the case has already been solved.
+
+This prevents the client from simply submitting arbitrary text and receiving the reward.
+
+---
+
+# Case Reward
+
+The base case reward is:
+
+```text
+500 XP
+250 Gold
+Blackwood Case Master Seal
+```
+
+Equipment perks may modify applicable rewards according to the server-side rules.
+
+---
+
+# Application Routes
+
+## Public Routes
+
+```text
+/
+ /login
+ /register
+```
+
+## Authenticated Routes
+
+```text
+/tasks
+/headquarters
+/desk
+/character
+/cases
+/locker
+/achievements
+/investigate/[caseId]
+/board/[caseId]
+```
+
+---
+
+# Project File Structure
+
+```text
+QuestChase/
+│
+├── public/
+│   ├── favicon.ico
+│   ├── icon.png
+│   ├── logo.png
+│   └── logo.jpg
+│
+├── scripts/
+│   ├── clean-next.js
+│   ├── verify_final_security_and_chapters.js
+│   └── verify_mystery_integrity.js
+│
+├── src/
+│   │
+│   ├── app/
+│   │   │
+│   │   ├── api/
+│   │   │   ├── achievements/
+│   │   │   ├── character/
+│   │   │   ├── cases/
+│   │   │   │   └── [caseId]/
+│   │   │   │       ├── actions/
+│   │   │   │       ├── board-positions/
+│   │   │   │       ├── connections/
+│   │   │   │       └── deduction/
+│   │   │   │
+│   │   │   ├── inventory/
+│   │   │   └── tasks/
+│   │   │       └── [id]/
+│   │   │           └── complete/
+│   │   │
+│   │   ├── achievements/
+│   │   ├── board/
+│   │   │   └── [caseId]/
+│   │   ├── cases/
+│   │   ├── character/
+│   │   ├── desk/
+│   │   ├── headquarters/
+│   │   ├── investigate/
+│   │   │   └── [caseId]/
+│   │   ├── locker/
+│   │   ├── login/
+│   │   ├── register/
+│   │   ├── tasks/
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   │
+│   ├── components/
+│   │   │
+│   │   ├── 3d/
+│   │   │   ├── CrimeScene3D.tsx
+│   │   │   ├── HeadquartersOffice3D.tsx
+│   │   │   └── RainParticles.tsx
+│   │   │
+│   │   ├── evidence/
+│   │   │   └── FinalAccusationModal.tsx
+│   │   │
+│   │   ├── layout/
+│   │   │   ├── CommandBar.tsx
+│   │   │   ├── DetectiveHUD.tsx
+│   │   │   ├── GameShell.tsx
+│   │   │   └── LevelUpCinematic.tsx
+│   │   │
+│   │   ├── tasks/
+│   │   │   ├── CreateTaskModal.tsx
+│   │   │   ├── EditTaskModal.tsx
+│   │   │   └── TaskCard.tsx
+│   │   │
+│   │   └── ui/
+│   │       ├── AnimatedButton.tsx
+│   │       ├── AnimatedNumber.tsx
+│   │       ├── AnimatedProgressBar.tsx
+│   │       ├── CaseSolvedCinematic.tsx
+│   │       ├── Skeleton.tsx
+│   │       └── ToastContainer.tsx
+│   │
+│   ├── lib/
+│   │   ├── apiClient.ts
+│   │   ├── initialData.ts
+│   │   ├── serverAuth.ts
+│   │   ├── serverCaseData.ts
+│   │   ├── serverCaseSolutions.ts
+│   │   ├── soundEngine.ts
+│   │   ├── store.ts
+│   │   ├── supabase.ts
+│   │   └── types.ts
+│   │
+│   └── middleware.ts
+│
+├── supabase/
+│   └── migrations/
+│       ├── 001_initial_schema.sql
+│       ├── 002_security_and_game_integrity.sql
+│       ├── 003_drop_old_investigation_rpc_and_enforce_chapter_integrity.sql
+│       └── 004_fix_quest_completion_and_security.sql
+│
+├── .env.example
+├── .eslintrc.json
+├── .gitignore
+├── next.config.mjs
+├── package.json
+├── package-lock.json
+├── postcss.config.mjs
+├── tailwind.config.ts
+├── tsconfig.json
+└── README.md
+```
+
+---
+
+# Environment Variables
+
+Create a local environment file:
+
+```text
+.env.local
+```
+
+Required variables:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+Do **not** commit `.env.local` or real Supabase credentials to GitHub.
+
+---
+
+# Local Development
+
+## Prerequisites
+
+Install:
+
+* Node.js 18+
+* Node.js 20+ recommended
+* npm
+* A Supabase project
+* Git
+* VS Code or another code editor
+
+---
+
+## 1. Clone the Repository
+
 ```bash
-# 1. Clone the repository
-git clone https://github.com/your-repo/QuestChase.git
+git clone <your-repository-url>
 cd QuestChase
+```
 
-# 2. Install dependencies
+---
+
+## 2. Install Dependencies
+
+```bash
 npm install
+```
 
-# 3. Configure environment variables
-cp .env.example .env.local
-# Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+---
 
-# 4. Apply Database Migrations (in order):
-# 4a. Run supabase/migrations/001_initial_schema.sql in your Supabase SQL Editor
-# 4b. Run supabase/migrations/002_security_and_game_integrity.sql in your Supabase SQL Editor
+## 3. Configure Supabase
 
-# 5. Start local development server
+Create a Supabase project.
+
+Get:
+
+```text
+Project URL
+Anon/Public Key
+```
+
+---
+
+## 4. Create `.env.local`
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+```
+
+---
+
+## 5. Apply Database Migrations
+
+Run the SQL files in Supabase SQL Editor in this order:
+
+```text
+001_initial_schema.sql
+002_security_and_game_integrity.sql
+003_drop_old_investigation_rpc_and_enforce_chapter_integrity.sql
+004_fix_quest_completion_and_security.sql
+```
+
+---
+
+## 6. Start the Development Server
+
+```bash
 npm run dev
 ```
 
-Visit `http://localhost:3000` to launch QuestChase!
+Open:
 
-### Production Build:
-```bash
-npm run build
-npm start
+```text
+http://localhost:3000
 ```
 
 ---
 
-## 9. License
+# Database Setup
 
-MIT License. Built for the Web Hackathon.
+The database should be initialized using the migrations under:
+
+```text
+supabase/migrations/
+```
+
+Migration order is important because later migrations modify the schema and security behavior introduced by earlier migrations.
+
+Recommended order:
+
+```text
+001 → 002 → 003 → 004
+```
+
+---
+
+# Build and Deployment
+
+## Production Build
+
+```bash
+npm run build
+```
+
+## Start Production Server
+
+```bash
+npm start
+```
+
+## Run Linter
+
+```bash
+npm run lint
+```
+
+---
+
+# Vercel Deployment
+
+QuestChase is designed for deployment on Vercel.
+
+Configure the following environment variables in the Vercel project:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+```
+
+Then deploy the project.
+
+Production URL:
+
+https://quest-chase.vercel.app/
+
+---
+
+# Available Scripts
+
+## Development
+
+```bash
+npm run dev
+```
+
+Starts the development server.
+
+## Production Build
+
+```bash
+npm run build
+```
+
+Creates the production Next.js build.
+
+## Production Server
+
+```bash
+npm start
+```
+
+Starts the production server.
+
+## Lint
+
+```bash
+npm run lint
+```
+
+Runs ESLint.
+
+---
+
+# Security and Integrity
+
+QuestChase is designed so important game outcomes are not controlled exclusively by browser-side JavaScript.
+
+## Authentication
+
+Supabase Auth manages authenticated user sessions.
+
+## Authorization
+
+API routes verify the authenticated user before accessing user-specific game state.
+
+## Row Level Security
+
+PostgreSQL RLS policies restrict database access based on the authenticated user.
+
+## Atomic Operations
+
+Important game operations use database functions to perform multiple state changes atomically.
+
+Examples:
+
+```text
+Quest completion
+Investigation action
+Evidence connection
+Equipment purchase
+Case solving
+Achievement unlocking
+```
+
+## Duplicate Reward Protection
+
+Quest completion and case completion contain protections against repeatedly claiming the same reward.
+
+## Evidence Ownership
+
+Users cannot legitimately connect evidence that they have not discovered.
+
+## Server-Side Deduction Validation
+
+The canonical mystery solution is kept server-side.
+
+The final deduction is validated using structured identifiers rather than relying on loose client-side text matching.
+
+## Chapter Gating
+
+Investigation content is protected by chapter progression checks.
+
+## Reward Ledger
+
+Important XP and Gold changes are recorded through reward transactions.
+
+---
+
+# Client State vs Persistent State
+
+Zustand is used as the client-side state layer.
+
+It does not replace the database.
+
+The general flow is:
+
+```text
+Supabase PostgreSQL
+        ↓
+Next.js API
+        ↓
+Zustand
+        ↓
+React UI
+```
+
+The database remains the authoritative source for persistent gameplay state.
+
+---
+
+# Important Source Files
+
+## `src/lib/types.ts`
+
+Contains TypeScript models for:
+
+* Tasks
+* Evidence
+* Evidence connections
+* Investigation actions
+* Suspects
+* Cases
+* Equipment
+* Achievements
+* Detective profiles
+* Notifications
+
+## `src/lib/store.ts`
+
+Contains the main client-side Zustand state.
+
+## `src/lib/apiClient.ts`
+
+Handles communication between the frontend and backend APIs.
+
+## `src/lib/supabase.ts`
+
+Contains Supabase client configuration.
+
+## `src/lib/serverAuth.ts`
+
+Provides server-side authentication helpers.
+
+## `src/lib/serverCaseData.ts`
+
+Contains server-side case-related data.
+
+## `src/lib/serverCaseSolutions.ts`
+
+Contains canonical case solution data and is intended to remain server-only.
+
+## `src/lib/soundEngine.ts`
+
+Contains the custom Web Audio API sound system.
+
+## `src/lib/initialData.ts`
+
+Contains client-safe initial game configuration and progression data.
+
+---
+
+# Future Scope
+
+QuestChase can be expanded with:
+
+* Multiple detective cases
+* Daily and weekly challenges
+* Multiplayer investigations
+* Leaderboards
+* Guild/team systems
+* More 3D crime scenes
+* Procedurally generated mysteries
+* AI-assisted quest generation
+* AI-generated case narratives
+* Mobile/PWA support
+* Push notifications
+* Advanced evidence graph visualization
+* More detective equipment
+* Admin case-authoring tools
+* Analytics dashboard
+* Social features
+* Cloud-hosted ambience and music
+* Dynamic difficulty
+* Seasonal cases
+
+---
+
+# Project Highlights
+
+QuestChase demonstrates the combination of several modern software engineering concepts:
+
+```text
+Full-Stack Development
+        +
+Authentication
+        +
+Database Design
+        +
+REST APIs
+        +
+State Management
+        +
+3D Web Development
+        +
+Game Mechanics
+        +
+Security
+        +
+Animations
+        +
+Audio Engineering
+        +
+Responsive UI
+        +
+Cloud Deployment
+```
+
+The project is therefore more than a traditional productivity application. It combines **productivity software, RPG mechanics, detective gameplay, 3D visualization and server-authoritative game logic** into a single full-stack web application.
+
+---
+
+# Conclusion
+
+QuestChase turns everyday productivity into an interactive detective adventure.
+
+Instead of simply asking:
+
+> "What tasks do I need to finish?"
+
+QuestChase asks:
+
+> **"What quest will you complete today?"**
+
+Complete your quests.
+Earn XP.
+Build your detective.
+Discover the evidence.
+Connect the clues.
+Solve the case.
+
+---
+
+## QuestChase
+
+**Complete your quests. Follow the clues. Solve the case.**

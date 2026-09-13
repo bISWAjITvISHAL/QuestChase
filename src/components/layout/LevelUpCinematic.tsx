@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import Image from 'next/image';
 import { useGameStore } from '@/lib/store';
 import { Shield, Sparkles, Coins, ArrowRight } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -34,8 +35,15 @@ export function LevelUpCinematic() {
         <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 bg-gold/30 rounded-full blur-2xl pointer-events-none" />
 
         {/* Level Up Emblem */}
-        <div className="mx-auto w-20 h-20 bg-noir border-2 border-gold rounded-full flex items-center justify-center text-gold shadow-gold mb-4">
-          <Shield className="w-10 h-10 text-gold animate-bounce" />
+        <div className="mx-auto w-24 h-24 bg-noir border-2 border-gold rounded-full overflow-hidden flex items-center justify-center text-gold shadow-gold mb-4">
+          <Image
+            src="/logo.png"
+            alt="QuestChase Bureau Emblem"
+            width={96}
+            height={96}
+            className="w-full h-full object-cover animate-pulse"
+            priority
+          />
         </div>
 
         <div className="text-xs font-cinematic font-bold tracking-widest text-crimson-bright uppercase mb-1">

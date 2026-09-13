@@ -111,7 +111,7 @@ class SoundEngine {
     noise.start(t);
   }
 
-  // Typewriter Key Stroke
+  // Typewriter Key Stroke / Click
   public playTypewriter() {
     if (!this.soundEnabled) return;
     const ctx = this.ensureContext();
@@ -132,6 +132,22 @@ class SoundEngine {
     gain.connect(ctx.destination);
     osc.start(t);
     osc.stop(t + 0.06);
+  }
+
+  public playClick() {
+    this.playTypewriter();
+  }
+
+  public playEvidenceFound() {
+    this.playClueFound();
+  }
+
+  public playSolveMystery() {
+    this.playCaseSolved();
+  }
+
+  public playCrimeDeduction() {
+    this.playStampThud();
   }
 
   // Clue Discovered Mysterious Chime

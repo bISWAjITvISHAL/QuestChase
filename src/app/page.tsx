@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   FolderOpen,
@@ -38,33 +39,27 @@ export default function LandingPage() {
       const saved = localStorage.getItem('casefile_audio_settings');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (typeof parsed.ambienceEnabled === 'boolean') {
-          initialActive = parsed.ambienceEnabled;
+        if (typeof parsed.audioEnabled === 'boolean') {
+          initialActive = parsed.audioEnabled;
         }
       }
     } catch {
-      // Ignored
+      // Fallback to active
     }
-
     setSoundActive(initialActive);
-    soundEngine.setSoundEnabled(initialActive);
-    soundEngine.setAmbienceEnabled(initialActive);
 
     const handleFirstGesture = () => {
       soundEngine.init();
       window.removeEventListener('click', handleFirstGesture);
       window.removeEventListener('keydown', handleFirstGesture);
-      window.removeEventListener('touchstart', handleFirstGesture);
     };
 
     window.addEventListener('click', handleFirstGesture);
     window.addEventListener('keydown', handleFirstGesture);
-    window.addEventListener('touchstart', handleFirstGesture);
 
     return () => {
       window.removeEventListener('click', handleFirstGesture);
       window.removeEventListener('keydown', handleFirstGesture);
-      window.removeEventListener('touchstart', handleFirstGesture);
     };
   }, []);
 
@@ -143,8 +138,15 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3.5 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded bg-gradient-to-br from-gold to-[#6b4e28] border border-gold/60 flex items-center justify-center text-noir shadow-gold group-hover:scale-105 transition">
-              <FolderOpen className="w-4 h-4 text-noir" />
+            <div className="w-9 h-9 rounded-full overflow-hidden border border-gold/60 flex items-center justify-center bg-noir shadow-gold group-hover:scale-105 transition shrink-0">
+              <Image
+                src="/logo.png"
+                alt="QuestChase Official Emblem"
+                width={36}
+                height={36}
+                className="w-full h-full object-cover"
+                priority
+              />
             </div>
             <div className="flex flex-col">
               <span className="font-cinematic font-bold text-lg sm:text-xl text-parchment tracking-wider leading-none">

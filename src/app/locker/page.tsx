@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { GameShell } from '@/components/layout/GameShell';
 import { useGameStore } from '@/lib/store';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
+import { LockerItemSkeleton } from '@/components/ui/Skeleton';
 import {
   Package,
   Search,
@@ -30,7 +31,7 @@ const GEAR_ICONS: Record<string, React.ElementType> = {
 };
 
 export default function LockerPage() {
-  const { equipment, profile, purchaseEquipment, toggleEquipItem } = useGameStore();
+  const { equipment, profile, purchaseEquipment, toggleEquipItem, isLoading, isInitialized } = useGameStore();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
 
@@ -91,7 +92,14 @@ export default function LockerPage() {
         )}
 
         {/* Equipment Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {isLoading || !isInitialized ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <LockerItemSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {equipment.map((item) => {
             const Icon = GEAR_ICONS[item.iconName] || Package;
             const itemCost = item.costGold || 100;
@@ -208,6 +216,7 @@ export default function LockerPage() {
             );
           })}
         </div>
+        )}
       </div>
     </GameShell>
   );

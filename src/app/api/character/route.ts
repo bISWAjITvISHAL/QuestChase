@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/serverAuth';
+import { getRankForLevel, calculateXpForLevel } from '@/lib/initialData';
 
 export async function GET(request: NextRequest) {
   const { user, error, client } = await getAuthenticatedUser(request);
@@ -26,16 +27,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Detective profile not found' }, { status: 404 });
     }
 
+    const level = typeof profile.level === 'number' && profile.level >= 1 ? profile.level : 1;
+    const canonicalRank = getRankForLevel(level);
+    const canonicalXpToNext = calculateXpForLevel(level);
+
     return NextResponse.json({
       profile: {
         id: profile.id,
         name: profile.name,
         badgeId: profile.badge_id,
         email: profile.email,
-        rank: profile.rank,
-        level: profile.level,
+        rank: canonicalRank,
+        level: level,
         xp: profile.xp,
-        xpToNextLevel: profile.xp_to_next_level,
+        xpToNextLevel: profile.xp_to_next_level || canonicalXpToNext,
         gold: profile.gold,
         streak: profile.streak,
         lastActiveDate: profile.last_active_date,

@@ -51,8 +51,8 @@ export function TaskCard({ task, onDelete, onEdit }: TaskCardProps) {
     };
   }, [task.id, completeTask]);
 
-  const handleStartComplete = () => {
-    if (task.isCompleted || undoSecondsLeft !== null || isPending) return;
+  const handleStartComplete = async () => {
+    if (task.isCompleted || isPending) return;
 
     // 1. Audio and visual reward particles
     soundEngine.playStampThud();
@@ -61,49 +61,16 @@ export function TaskCard({ task, onDelete, onEdit }: TaskCardProps) {
       setShowFloatingReward(false);
     }, 1400);
 
-    // 2. Optimistically add rewards immediately to profile so user sees instant coin count
-    useGameStore.setState((state) => ({
-      profile: {
-        ...state.profile,
-        gold: state.profile.gold + gold,
-        xp: state.profile.xp + task.xpReward,
-      },
-    }));
-
-    // 3. Start 5 second countdown buffer
-    setUndoSecondsLeft(5);
-
-    undoIntervalRef.current = setInterval(() => {
-      setUndoSecondsLeft((prev) => {
-        if (prev === null || prev <= 1) {
-          if (undoIntervalRef.current) clearInterval(undoIntervalRef.current);
-          return null;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    undoTimerRef.current = setTimeout(async () => {
-      if (undoIntervalRef.current) clearInterval(undoIntervalRef.current);
-      undoTimerRef.current = null;
-      setUndoSecondsLeft(null);
-      setIsPending(true);
-      try {
-        await completeTask(task.id);
-      } finally {
-        setIsPending(false);
-      }
-    }, 5000);
+    setIsPending(true);
+    try {
+      await completeTask(task.id);
+    } finally {
+      setIsPending(false);
+    }
   };
 
   const handleUndo = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    if (undoIntervalRef.current) clearInterval(undoIntervalRef.current);
-    undoTimerRef.current = null;
-    undoIntervalRef.current = null;
-    setUndoSecondsLeft(null);
-
     // Reclaim coins and XP and restore active status
     undoTaskCompletion(task.id, {
       xp: task.xpReward,

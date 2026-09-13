@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useGameStore } from '@/lib/store';
 import {
@@ -24,6 +25,7 @@ import {
 import { soundEngine } from '@/lib/soundEngine';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { AnimatedProgressBar } from '@/components/ui/AnimatedProgressBar';
+import { calculateXpForLevel } from '@/lib/initialData';
 
 export function DetectiveHUD() {
   const pathname = usePathname();
@@ -33,7 +35,8 @@ export function DetectiveHUD() {
 
   const currentCase = cases.find((c) => c.id === activeCaseId) || cases[0];
   const gold = profile.gold || 0;
-  const xpPercentage = Math.min(100, Math.round((profile.xp / profile.xpToNextLevel) * 100));
+  const xpNeeded = profile.xpToNextLevel || calculateXpForLevel(profile.level);
+  const xpPercentage = Math.min(100, Math.max(0, Math.round(((profile.xp || 0) / (xpNeeded || 100)) * 100)));
 
   const handleToggleAudio = () => {
     const next = !audioOn;
@@ -51,22 +54,20 @@ export function DetectiveHUD() {
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-[#0c0d10]/95 backdrop-blur-md border-b border-[#2b241c] px-3 sm:px-6 py-2 shadow-2xl">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
-        {/* Left: Fedora/Pipe Logo + QuestChase Name */}
+        {/* Left: Official QuestChase Emblem Logo + Name */}
         <Link
           href="/headquarters"
           className="flex items-center gap-2.5 group shrink-0 min-h-[44px] py-1 rounded focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none"
         >
-          <div className="w-8 h-8 rounded bg-gradient-to-br from-[#2a2219] to-noir border border-gold/40 flex items-center justify-center text-gold shadow-md group-hover:scale-105 transition duration-150">
-            <svg
-              className="w-5 h-5 text-gold"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              {/* Fedora Hat Silhouette */}
-              <path d="M12 2C8.5 2 6 4 4 6c1.5.5 3 .8 5 .9C10 7 11 7 12 7s2 0 3-.1c2-.1 3.5-.4 5-.9-2-2-4.5-4-8-4z" />
-              <path d="M2 12c1.5 0 3-.5 4.5-1.2C8 10 9.8 9.5 12 9.5s4 .5 5.5 1.3C19 11.5 20.5 12 22 12c.6 0 1-.4 1-1 0-.3-.1-.6-.3-.8C20.5 8.5 17 8 12 8S3.5 8.5 1.3 10.2c-.2.2-.3.5-.3.8 0 .6.4 1 1 1z" />
-              <path d="M6 14v1c0 3.3 2.7 6 6 6s6-2.7 6-6v-1c-1.8 1-3.8 1.5-6 1.5s-4.2-.5-6-1.5z" />
-            </svg>
+          <div className="w-8 h-8 rounded-full overflow-hidden border border-gold/60 flex items-center justify-center bg-noir shadow-gold group-hover:scale-105 transition duration-150 shrink-0">
+            <Image
+              src="/logo.png"
+              alt="QuestChase Detective Bureau Emblem"
+              width={32}
+              height={32}
+              className="w-full h-full object-cover"
+              priority
+            />
           </div>
           <div className="flex flex-col">
             <span className="font-cinematic font-bold text-sm sm:text-base text-parchment tracking-wider leading-none">
@@ -100,7 +101,7 @@ export function DetectiveHUD() {
             <div className="flex items-center gap-1.5 text-xs font-cinematic font-bold text-parchment">
               <span>LEVEL {profile.level}</span>
               <span className="text-[10px] text-steel typewriter-text flex items-center gap-0.5">
-                (<AnimatedNumber value={profile.xp} /> / {profile.xpToNextLevel.toLocaleString()} XP)
+                (<AnimatedNumber value={profile.xp} /> / {xpNeeded.toLocaleString()} XP)
               </span>
             </div>
             <div className="w-32 mt-1">

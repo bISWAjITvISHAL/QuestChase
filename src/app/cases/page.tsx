@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { GameShell } from '@/components/layout/GameShell';
 import { useGameStore } from '@/lib/store';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
+import { CaseCardSkeleton, Skeleton } from '@/components/ui/Skeleton';
 import {
   FolderOpen,
   Lock,
@@ -23,7 +24,7 @@ import { soundEngine } from '@/lib/soundEngine';
 
 export default function CasesPage() {
   const router = useRouter();
-  const { cases, activeCaseId, setActiveCase } = useGameStore();
+  const { cases, activeCaseId, setActiveCase, isLoading, isInitialized } = useGameStore();
 
   const handleOpenCase = (caseId: string) => {
     soundEngine.playPaperRustle();
@@ -48,7 +49,13 @@ export default function CasesPage() {
         </div>
 
         {/* Case Files Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {isLoading || !isInitialized ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <CaseCardSkeleton />
+            <CaseCardSkeleton />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {cases.map((cf) => {
             const isComingSoon = cf.id === 'case_002';
             const isSolved = cf.status === 'SOLVED';
@@ -164,6 +171,7 @@ export default function CasesPage() {
             );
           })}
         </div>
+        )}
       </div>
     </GameShell>
   );

@@ -75,16 +75,66 @@ export const RANKS: RankInfo[] = [
 ];
 
 export function calculateXpForLevel(level: number): number {
-  return Math.round(100 * Math.pow(level, 1.35));
+  return Math.round(100 * Math.pow(Math.max(1, level), 1.35));
 }
 
 export function getRankForLevel(level: number): DetectiveRank {
+  const safeLevel = Math.max(1, level);
   for (let i = RANKS.length - 1; i >= 0; i--) {
-    if (level >= RANKS[i].minLevel) {
+    if (safeLevel >= RANKS[i].minLevel) {
       return RANKS[i].rank;
     }
   }
   return 'ROOKIE';
+}
+
+export function getRankInfoForLevel(level: number): RankInfo {
+  const safeLevel = Math.max(1, level);
+  for (let i = RANKS.length - 1; i >= 0; i--) {
+    if (safeLevel >= RANKS[i].minLevel) {
+      return RANKS[i];
+    }
+  }
+  return RANKS[0];
+}
+
+export function applyXpProgression(
+  currentLevel: number,
+  currentXp: number,
+  xpGained: number
+): {
+  newLevel: number;
+  newXp: number;
+  xpToNextLevel: number;
+  newRank: DetectiveRank;
+  levelsGained: number;
+  didLevelUp: boolean;
+  bonusGold: number;
+} {
+  let level = Math.max(1, currentLevel);
+  let xp = Math.max(0, currentXp) + Math.max(0, xpGained);
+  let xpNeeded = calculateXpForLevel(level);
+  let levelsGained = 0;
+
+  while (xp >= xpNeeded) {
+    xp -= xpNeeded;
+    level += 1;
+    levelsGained += 1;
+    xpNeeded = calculateXpForLevel(level);
+  }
+
+  const newRank = getRankForLevel(level);
+  const bonusGold = levelsGained * 50;
+
+  return {
+    newLevel: level,
+    newXp: xp,
+    xpToNextLevel: xpNeeded,
+    newRank,
+    levelsGained,
+    didLevelUp: levelsGained > 0,
+    bonusGold,
+  };
 }
 
 export const INITIAL_EQUIPMENT: EquipmentItem[] = [

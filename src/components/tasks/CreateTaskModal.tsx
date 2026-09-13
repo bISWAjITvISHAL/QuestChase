@@ -14,6 +14,7 @@ import {
 import { soundEngine } from '@/lib/soundEngine';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
+import { CreateTaskModalLoadingSkeleton } from '@/components/ui/Skeleton';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -137,7 +138,10 @@ export function CreateTaskModal({ isOpen, onClose }: CreateTaskModalProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {isSubmitting ? (
+          <CreateTaskModalLoadingSkeleton />
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
           {/* Title */}
           <div>
             <label className="block text-xs font-cinematic font-bold text-parchment uppercase tracking-wider mb-1">
@@ -351,6 +355,7 @@ export function CreateTaskModal({ isOpen, onClose }: CreateTaskModalProps) {
             </AnimatedButton>
           </div>
         </form>
+        )}
       </motion.div>
     </div>
   );

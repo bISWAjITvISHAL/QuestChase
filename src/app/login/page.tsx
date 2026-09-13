@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/lib/store';
 import { supabaseSignIn, isSupabaseConfigured } from '@/lib/supabase';
@@ -20,6 +21,7 @@ import {
   Fingerprint,
 } from 'lucide-react';
 import { soundEngine } from '@/lib/soundEngine';
+import { LoginVerificationSkeleton } from '@/components/ui/Skeleton';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -81,7 +83,16 @@ export default function LoginPage() {
           {/* Top Brand Header */}
           <div className="flex items-center justify-between z-10">
             <Link href="/" className="flex items-center gap-2 group">
-              <Shield className="w-5 h-5 text-gold" />
+              <div className="w-7 h-7 rounded-full overflow-hidden border border-gold/60 flex items-center justify-center bg-noir shadow-gold shrink-0">
+                <Image
+                  src="/logo.png"
+                  alt="QuestChase Logo"
+                  width={28}
+                  height={28}
+                  className="w-full h-full object-cover"
+                  priority
+                />
+              </div>
               <span className="font-cinematic font-bold text-lg text-parchment tracking-wider">
                 QUESTCHASE
               </span>
@@ -185,8 +196,11 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Verification Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {isVerifying ? (
+              <LoginVerificationSkeleton />
+            ) : (
+              /* Verification Form */
+              <form onSubmit={handleSubmit} className="space-y-4">
               {/* Bureau Email Address */}
               <div>
                 <label className="block text-[11px] font-cinematic font-bold text-parchment uppercase tracking-wider mb-1.5">
@@ -269,7 +283,8 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
-            </form>
+              </form>
+            )}
           </div>
 
           {/* Registration Link */}

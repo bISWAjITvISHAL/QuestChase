@@ -16,6 +16,10 @@ import {
   INITIAL_CASES,
   INITIAL_EQUIPMENT,
   INITIAL_ACHIEVEMENTS,
+  calculateXpForLevel,
+  getRankForLevel,
+  getRankInfoForLevel,
+  applyXpProgression,
 } from './initialData';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { soundEngine } from './soundEngine';
@@ -223,11 +227,17 @@ export const useGameStore = create<GameState>((set, get) => ({
 
           if (profileRes.status === 'fulfilled' && profileRes.value.profile) {
             const fetchedProfile = profileRes.value.profile as DetectiveProfile;
+            const safeLevel = Math.max(1, fetchedProfile.level || 1);
+            const canonicalRank = getRankForLevel(safeLevel);
+            const canonicalXpToNext = calculateXpForLevel(safeLevel);
             const settings = {
               audioEnabled: fetchedProfile.settings?.audioEnabled ?? true,
               ambienceEnabled: fetchedProfile.settings?.ambienceEnabled ?? true,
               reducedMotion: fetchedProfile.settings?.reducedMotion ?? false,
             };
+            fetchedProfile.level = safeLevel;
+            fetchedProfile.rank = canonicalRank;
+            fetchedProfile.xpToNextLevel = canonicalXpToNext;
             fetchedProfile.settings = settings;
             set({ profile: fetchedProfile });
 
@@ -575,9 +585,19 @@ export const useGameStore = create<GameState>((set, get) => ({
 
       if (!isLocalGuestTask) {
         if (response?.success && response.profile) {
-          // Authoritative update from server
+          // Authoritative update from server with canonical rank and xpToNextLevel
+          const authoritativeLevel = Math.max(1, response.profile.level || 1);
+          const authoritativeRank = getRankForLevel(authoritativeLevel);
+          const authoritativeXpToNext = calculateXpForLevel(authoritativeLevel);
+          const updatedProfile: DetectiveProfile = {
+            ...response.profile,
+            level: authoritativeLevel,
+            rank: authoritativeRank,
+            xpToNextLevel: authoritativeXpToNext,
+          };
+
           set((state) => ({
-            profile: response.profile,
+            profile: updatedProfile,
             tasks: state.tasks.map((t) => (t.id === id ? response.task : t)),
           }));
 
@@ -592,15 +612,17 @@ export const useGameStore = create<GameState>((set, get) => ({
 
           if (response.levelUp?.didLevelUp) {
             soundEngine.playLevelUp();
+            const newRank = getRankForLevel(response.levelUp.newLevel);
+            const newRankInfo = getRankInfoForLevel(response.levelUp.newLevel);
             set({
               levelUpModalOpen: true,
               levelUpData: {
                 oldLevel: response.levelUp.oldLevel || previousProfile.level,
-                oldRank: previousProfile.rank,
+                oldRank: getRankForLevel(response.levelUp.oldLevel || previousProfile.level),
                 newLevel: response.levelUp.newLevel,
-                newRank: response.levelUp.rank,
+                newRank,
                 bonusGold: response.levelUp.bonusGold || 50,
-                unlockedTitle: `CLEARANCE GRADE ${response.levelUp.newLevel} • ${response.levelUp.rank}`,
+                unlockedTitle: `${newRankInfo.title.toUpperCase()} • GRADE ${response.levelUp.newLevel}`,
               },
             });
           }
@@ -619,19 +641,35 @@ export const useGameStore = create<GameState>((set, get) => ({
           return { success: false, message: errorMsg };
         }
       } else {
-        // Local/guest mode rewards
-        const newXp = previousProfile.xp + task.xpReward;
-        const newGold = previousProfile.gold + (task.goldReward || 20);
-        const newLevel = Math.floor(newXp / 500) + 1;
+        // Local/guest mode rewards using canonical progression
+        const progression = applyXpProgression(previousProfile.level, previousProfile.xp, task.xpReward);
+        const newGold = previousProfile.gold + (task.goldReward || 20) + progression.bonusGold;
+
+        // Apply attribute growth
+        const newAttrs = { ...previousProfile.attributes };
+        if (task.attributeRewards) {
+          (Object.keys(task.attributeRewards) as AttributeType[]).forEach((attr) => {
+            const val = task.attributeRewards?.[attr];
+            if (val) {
+              newAttrs[attr] = (newAttrs[attr] || 0) + val;
+            }
+          });
+        }
+
         set((state) => ({
           profile: {
             ...state.profile,
-            xp: newXp,
+            xp: progression.newXp,
+            level: progression.newLevel,
+            xpToNextLevel: progression.xpToNextLevel,
+            rank: progression.newRank,
             gold: newGold,
-            level: newLevel,
+            attributes: newAttrs,
+            tasksCompletedCount: (state.profile.tasksCompletedCount || 0) + 1,
           },
         }));
 
+        // Reward Toast notification
         get().addToast({
           type: 'reward',
           title: 'QUEST COMPLETED',
@@ -639,6 +677,22 @@ export const useGameStore = create<GameState>((set, get) => ({
           xpReward: task.xpReward,
           goldReward: task.goldReward || 20,
         });
+
+        if (progression.didLevelUp) {
+          soundEngine.playLevelUp();
+          const newRankInfo = getRankInfoForLevel(progression.newLevel);
+          set({
+            levelUpModalOpen: true,
+            levelUpData: {
+              oldLevel: previousProfile.level,
+              oldRank: previousProfile.rank,
+              newLevel: progression.newLevel,
+              newRank: progression.newRank,
+              bonusGold: progression.bonusGold,
+              unlockedTitle: `${newRankInfo.title.toUpperCase()} • GRADE ${progression.newLevel}`,
+            },
+          });
+        }
 
         get().checkAchievements();
         return { success: true };
@@ -656,15 +710,18 @@ export const useGameStore = create<GameState>((set, get) => ({
         return { success: false, message: errMsg };
       } else {
         // Local/guest mode fallback
-        const newXp = previousProfile.xp + task.xpReward;
-        const newGold = previousProfile.gold + (task.goldReward || 20);
-        const newLevel = Math.floor(newXp / 500) + 1;
+        const progression = applyXpProgression(previousProfile.level, previousProfile.xp, task.xpReward);
+        const newGold = previousProfile.gold + (task.goldReward || 20) + progression.bonusGold;
+
         set((state) => ({
           profile: {
             ...state.profile,
-            xp: newXp,
+            xp: progression.newXp,
+            level: progression.newLevel,
+            xpToNextLevel: progression.xpToNextLevel,
+            rank: progression.newRank,
             gold: newGold,
-            level: newLevel,
+            tasksCompletedCount: (state.profile.tasksCompletedCount || 0) + 1,
           },
         }));
 
@@ -675,6 +732,22 @@ export const useGameStore = create<GameState>((set, get) => ({
           xpReward: task.xpReward,
           goldReward: task.goldReward || 20,
         });
+
+        if (progression.didLevelUp) {
+          soundEngine.playLevelUp();
+          const newRankInfo = getRankInfoForLevel(progression.newLevel);
+          set({
+            levelUpModalOpen: true,
+            levelUpData: {
+              oldLevel: previousProfile.level,
+              oldRank: previousProfile.rank,
+              newLevel: progression.newLevel,
+              newRank: progression.newRank,
+              bonusGold: progression.bonusGold,
+              unlockedTitle: `${newRankInfo.title.toUpperCase()} • GRADE ${progression.newLevel}`,
+            },
+          });
+        }
 
         get().checkAchievements();
         return { success: true };

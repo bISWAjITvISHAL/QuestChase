@@ -7,6 +7,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://questchase.agency'),
   title: 'QuestChase — Complete your quests. Follow the clues. Solve the case.',
   description:
     'A gamified productivity application designed as a premium cinematic detective mystery. Real-life tasks fuel your casework, earn XP & Gold, reveal forensic clues, and solve murder cases.',
@@ -19,11 +20,28 @@ export const metadata: Metadata = {
     'Productivity Game',
   ],
   authors: [{ name: 'QuestChase Bureau' }],
+  icons: {
+    icon: [
+      { url: '/icon.png' },
+      { url: '/logo.png' },
+      { url: '/favicon.ico' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/apple-icon.png',
+  },
   openGraph: {
     title: 'QuestChase — Complete your quests. Follow the clues. Solve the case.',
     description:
       'Real-life tasks fuel your casework, earn XP & Gold, reveal forensic clues, and solve murder cases.',
     type: 'website',
+    images: [
+      {
+        url: '/logo.png',
+        width: 1024,
+        height: 1024,
+        alt: 'QuestChase Detective Mystery RPG Logo',
+      },
+    ],
   },
 };
 

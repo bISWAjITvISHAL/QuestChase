@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { GameShell } from '@/components/layout/GameShell';
 import { useGameStore } from '@/lib/store';
 import {
@@ -25,15 +26,18 @@ import {
   Radio,
   Sliders,
 } from 'lucide-react';
-import { RANKS } from '@/lib/initialData';
+import { RANKS, getRankForLevel, calculateXpForLevel } from '@/lib/initialData';
 import { soundEngine } from '@/lib/soundEngine';
 
 export default function CharacterProfilePage() {
   const { profile, setProfile, cases, tasks, achievements } = useGameStore();
 
   const gold = profile.gold || 0;
-  const currentRankInfo = RANKS.find((r) => r.rank === profile.rank) || RANKS[0];
+  const canonicalRank = getRankForLevel(profile.level);
+  const currentRankInfo = RANKS.find((r) => r.rank === canonicalRank) || RANKS[0];
   const nextRank = RANKS.find((r) => r.minLevel > profile.level);
+  const xpToNext = profile.xpToNextLevel || calculateXpForLevel(profile.level);
+  const xpPercentage = Math.min(100, Math.max(0, Math.round((profile.xp / xpToNext) * 100)));
 
   const solvedCases = cases.filter((c) => c.status === 'SOLVED');
   const totalEvidenceCount = cases.reduce(
@@ -70,8 +74,8 @@ export default function CharacterProfilePage() {
       name: 'RESILIENCE',
       level: profile.attributes.resilience || 2,
       domain: 'TRIBUNAL PRESSURE',
-      desc: 'Powers adversarial interrogation composure, stamina during late-night stakeouts, and resistance to red herrings.',
-      icon: Shield,
+      desc: 'Powers endurance through high-stakes interrogation pressure, fatigue mitigation, and adversarial courtroom resistance.',
+      icon: Zap,
       border: 'border-steel/40 hover:border-gold',
     },
   ];
@@ -86,9 +90,18 @@ export default function CharacterProfilePage() {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
             <div className="flex items-center gap-5">
               {/* Metallic Badge Emblem */}
-              <div className="relative flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-b from-[#1e2025] to-[#0c0d0f] border-2 border-gold rounded-full text-gold shadow-gold shrink-0">
-                <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-gold filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" />
-                <span className="absolute -bottom-1 bg-crimson text-parchment text-[10px] font-cinematic font-black px-2 py-0.5 rounded border border-gold/60 shadow-crimson tracking-wider">
+              <div className="relative flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 bg-noir border-2 border-gold rounded-full overflow-visible text-gold shadow-gold shrink-0">
+                <div className="w-full h-full rounded-full overflow-hidden">
+                  <Image
+                    src="/logo.png"
+                    alt="Detective Bureau Badge Emblem"
+                    width={96}
+                    height={96}
+                    className="w-full h-full object-cover"
+                    priority
+                  />
+                </div>
+                <span className="absolute -bottom-1 bg-crimson text-parchment text-[10px] font-cinematic font-black px-2 py-0.5 rounded border border-gold/60 shadow-crimson tracking-wider z-10">
                   LVL {profile.level}
                 </span>
               </div>
@@ -102,10 +115,10 @@ export default function CharacterProfilePage() {
                 </h1>
                 <div className="flex flex-wrap items-center gap-2.5 mt-1.5">
                   <span className="text-xs bg-gold/15 text-gold px-3 py-1 rounded border border-gold/40 font-cinematic font-bold tracking-wider">
-                    {profile.rank}
+                    {canonicalRank}
                   </span>
                   <span className="text-xs text-parchment-dim typewriter-text">
-                    &ldquo;{currentRankInfo.title}&rdquo;
+                    &ldquo;{currentRankInfo.title}&rdquo; (Level {currentRankInfo.minLevel}+)
                   </span>
                 </div>
               </div>
@@ -140,17 +153,17 @@ export default function CharacterProfilePage() {
           <div className="mt-6 pt-4 border-t border-steel/20">
             <div className="flex items-center justify-between text-xs typewriter-text mb-1.5">
               <span className="text-steel">
-                CURRENT RANK PROGRESSION: <strong className="text-parchment">{profile.xp} XP</strong>
+                CLEARANCE PROGRESSION: <strong className="text-parchment">{profile.xp} / {xpToNext} XP ({xpPercentage}%)</strong>
               </span>
-              <span className="text-gold">
-                {nextRank ? `NEXT RANK: ${nextRank.rank} (LVL ${nextRank.minLevel})` : 'TOP CLEARANCE ACHIEVED'}
+              <span className="text-gold font-cinematic font-bold">
+                {nextRank ? `NEXT RANK: ${nextRank.title.toUpperCase()} (LEVEL ${nextRank.minLevel})` : 'TOP BUREAU RANK ACHIEVED'}
               </span>
             </div>
             <div className="w-full h-2 bg-[#090a0c] rounded-full overflow-hidden border border-steel/30">
               <div
-                className="h-full bg-gradient-to-r from-gold via-gold-bright to-gold"
+                className="h-full bg-gradient-to-r from-gold via-gold-bright to-gold transition-all duration-500"
                 style={{
-                  width: `${Math.min(100, ((profile.xp % 1000) / 1000) * 100)}%`,
+                  width: `${xpPercentage}%`,
                 }}
               />
             </div>
@@ -443,24 +456,29 @@ export default function CharacterProfilePage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
             {RANKS.map((rk) => {
-              const isCurrent = profile.rank === rk.rank;
+              const isCurrent = canonicalRank === rk.rank;
               const isUnlocked = profile.level >= rk.minLevel;
 
               return (
                 <div
                   key={rk.rank}
-                  className={`p-3 rounded border text-center transition tactile-card ${
+                  className={`p-3 rounded border text-center transition tactile-card flex flex-col justify-between min-h-[90px] ${
                     isCurrent
-                      ? 'bg-gold/15 border-gold text-parchment shadow-gold ring-1 ring-gold/50'
+                      ? 'bg-gold/20 border-gold text-parchment shadow-gold ring-1 ring-gold/60'
                       : isUnlocked
                       ? 'bg-[#0b0c0e] border-steel/40 text-parchment-dim'
                       : 'bg-[#090a0c] border-steel/15 text-steel opacity-40'
                   }`}
                 >
-                  <div className="text-[9px] typewriter-text text-gold font-bold">
-                    LVL {rk.minLevel}+
+                  <div>
+                    <div className={`text-[9px] font-cinematic font-bold ${isCurrent ? 'text-gold' : 'text-steel'}`}>
+                      LEVEL {rk.minLevel}+
+                    </div>
+                    <div className="text-xs font-cinematic font-bold mt-0.5 leading-tight">
+                      {rk.title}
+                    </div>
                   </div>
-                  <div className="text-xs font-cinematic font-bold truncate mt-0.5">
+                  <div className="text-[8px] typewriter-text text-parchment-dim uppercase mt-1">
                     {rk.rank}
                   </div>
                 </div>

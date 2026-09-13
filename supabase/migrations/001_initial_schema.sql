@@ -314,13 +314,13 @@ BEGIN
   END LOOP;
 
   -- Rank progression
-  IF v_new_level >= 15 THEN v_new_rank := 'MASTER DETECTIVE';
-  ELSIF v_new_level >= 12 THEN v_new_rank := 'CHIEF INVESTIGATOR';
-  ELSIF v_new_level >= 10 THEN v_new_rank := 'SENIOR INVESTIGATOR';
-  ELSIF v_new_level >= 8 THEN v_new_rank := 'SPECIALIST';
-  ELSIF v_new_level >= 6 THEN v_new_rank := 'INSPECTOR';
-  ELSIF v_new_level >= 4 THEN v_new_rank := 'INVESTIGATOR';
-  ELSIF v_new_level >= 2 THEN v_new_rank := 'DETECTIVE';
+  IF v_new_level >= 30 THEN v_new_rank := 'MASTER DETECTIVE';
+  ELSIF v_new_level >= 25 THEN v_new_rank := 'CHIEF INVESTIGATOR';
+  ELSIF v_new_level >= 20 THEN v_new_rank := 'SENIOR INVESTIGATOR';
+  ELSIF v_new_level >= 15 THEN v_new_rank := 'SPECIALIST';
+  ELSIF v_new_level >= 10 THEN v_new_rank := 'INSPECTOR';
+  ELSIF v_new_level >= 6 THEN v_new_rank := 'INVESTIGATOR';
+  ELSIF v_new_level >= 3 THEN v_new_rank := 'DETECTIVE';
   ELSE v_new_rank := 'ROOKIE';
   END IF;
 

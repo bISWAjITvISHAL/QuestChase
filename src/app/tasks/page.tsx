@@ -5,6 +5,7 @@ import { GameShell } from '@/components/layout/GameShell';
 import { useGameStore } from '@/lib/store';
 import { TaskCard } from '@/components/tasks/TaskCard';
 import { CreateTaskModal } from '@/components/tasks/CreateTaskModal';
+import { TasksPageSkeleton } from '@/components/ui/Skeleton';
 import {
   Plus,
   Search,
@@ -19,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export default function TasksPage() {
-  const { tasks } = useGameStore();
+  const { tasks, isLoading, isInitialized } = useGameStore();
   const [modalOpen, setModalOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'ACTIVE' | 'SOLVED'>('ACTIVE');
@@ -52,12 +53,15 @@ export default function TasksPage() {
 
   return (
     <GameShell>
-      <div className="space-y-6">
-        {/* Desk Header & Summary Stats */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-steel/30 pb-4">
-          <div>
-            <div className="text-[10px] font-cinematic font-bold tracking-widest text-crimson-bright uppercase">
-              CASEWORK DOCKET REGISTER • METROPOLITAN INVESTIGATION BUREAU
+      {isLoading || !isInitialized ? (
+        <TasksPageSkeleton />
+      ) : (
+        <div className="space-y-6">
+          {/* Desk Header & Summary Stats */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-steel/30 pb-4">
+            <div>
+              <div className="text-[10px] font-cinematic font-bold tracking-widest text-crimson-bright uppercase">
+                CASEWORK DOCKET REGISTER • METROPOLITAN INVESTIGATION BUREAU
             </div>
             <h1 className="text-2xl sm:text-3xl font-cinematic font-black text-parchment tracking-wide">
               REAL-WORLD QUESTS
@@ -174,6 +178,7 @@ export default function TasksPage() {
           </div>
         )}
       </div>
+      )}
 
       <CreateTaskModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </GameShell>

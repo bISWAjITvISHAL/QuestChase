@@ -3,6 +3,7 @@
 import React from 'react';
 import { GameShell } from '@/components/layout/GameShell';
 import { useGameStore } from '@/lib/store';
+import { AchievementCardSkeleton, Skeleton } from '@/components/ui/Skeleton';
 import {
   Award,
   CheckCircle,
@@ -42,10 +43,10 @@ const ACHIEVEMENT_ICONS: Record<string, React.ElementType> = {
 };
 
 export default function AchievementsPage() {
-  const { achievements } = useGameStore();
+  const { achievements, isLoading, isInitialized } = useGameStore();
 
   const unlockedCount = achievements.filter((a) => a.isUnlocked).length;
-  const progressPercent = Math.round((unlockedCount / achievements.length) * 100);
+  const progressPercent = Math.round((unlockedCount / (achievements.length || 1)) * 100);
 
   return (
     <GameShell>
@@ -82,7 +83,14 @@ export default function AchievementsPage() {
         </div>
 
         {/* Achievements Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {isLoading || !isInitialized ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <AchievementCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {achievements.map((ach) => {
             const Icon = ACHIEVEMENT_ICONS[ach.icon] || Award;
             const percent = Math.min(100, Math.round((ach.progress / ach.maxProgress) * 100));
@@ -165,6 +173,7 @@ export default function AchievementsPage() {
             );
           })}
         </div>
+        )}
       </div>
     </GameShell>
   );

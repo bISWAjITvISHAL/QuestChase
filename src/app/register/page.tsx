@@ -2,11 +2,13 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/lib/store';
 import { supabaseSignUp, isSupabaseConfigured } from '@/lib/supabase';
 import { Shield, Mail, Lock, ArrowRight, UserCheck, Check, AlertCircle, Fingerprint, Award } from 'lucide-react';
 import { soundEngine } from '@/lib/soundEngine';
+import { CommissionOperativeSkeleton } from '@/components/ui/Skeleton';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -22,56 +24,75 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    soundEngine.playTypewriter();
-    setIsRegistering(true);
+    if (!name || !email || !password) {
+      setErrorMessage('All credentials and operative signature are required.');
+      return;
+    }
+    if (password.length < 6) {
+      setErrorMessage('Clearance key must be at least 6 characters in length.');
+      return;
+    }
+
     setErrorMessage('');
+    setIsRegistering(true);
+    soundEngine.playClick();
 
     if (!isSupabaseConfigured) {
-      setErrorMessage('Database configuration missing. Please verify Supabase environment variables.');
-      setIsRegistering(false);
+      // Offline / guest mock registration
+      setTimeout(async () => {
+        setIsRegistering(false);
+        setIsRegistered(true);
+        soundEngine.playSolveMystery();
+        await initGame();
+        setTimeout(() => {
+          router.push('/headquarters');
+        }, 1200);
+      }, 1000);
       return;
     }
 
     try {
-      const { user, session, error } = await supabaseSignUp(email.trim(), password, name.trim());
-      if (error) throw error;
+      const { user, session } = await supabaseSignUp(email.trim(), password, name.trim());
+      setIsRegistering(false);
 
-      if (user && !session) {
+      if (session && user) {
+        soundEngine.playSolveMystery();
+        setIsRegistered(true);
+        setAuthenticatedUser(user);
+        await initGame();
+        setTimeout(() => {
+          router.push('/headquarters');
+        }, 1200);
+      } else if (user && !session) {
+        soundEngine.playStampThud();
         setIsRegistered(true);
         setRequiresEmailConfirmation(true);
-        soundEngine.playStampThud();
-        return;
       }
-
-      if (user) {
-        setAuthenticatedUser({ id: user.id, email: user.email, name: name.trim() });
-        await initGame();
-      }
-
-      soundEngine.playStampThud();
-      setIsRegistered(true);
-
-      setTimeout(() => {
-        soundEngine.playPaperRustle();
-        router.push('/headquarters');
-      }, 700);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Registration failed. Please check your credentials.';
-      setErrorMessage(msg);
       setIsRegistering(false);
+      const message = err instanceof Error ? err.message : 'Registration failed. Please check your credentials.';
+      setErrorMessage(message);
     }
   };
 
   return (
-    <div className="min-h-screen bg-noir flex items-center justify-center p-3 sm:p-6 relative overflow-hidden">
-      <div className="absolute inset-0 bg-vignette pointer-events-none z-0" />
-      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-amber-900/10 rounded-full blur-[160px] pointer-events-none" />
+    <div className="min-h-screen bg-noir text-parchment flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Noir background vignette */}
+      <div className="absolute inset-0 bg-vignette pointer-events-none" />
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-amber-900/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10 max-w-xl w-full bg-[#121316] text-parchment p-6 sm:p-10 rounded shadow-2xl border-2 border-gold/40">
         {/* Header */}
         <div className="text-center border-b border-steel/30 pb-5 mb-6">
-          <div className="w-14 h-14 mx-auto mb-3 bg-[#1c1d22] border-2 border-gold/60 rounded-full flex items-center justify-center text-gold shadow-gold">
-            <Shield className="w-7 h-7 text-gold" />
+          <div className="w-16 h-16 mx-auto mb-3 bg-noir border-2 border-gold/60 rounded-full overflow-hidden flex items-center justify-center text-gold shadow-gold">
+            <Image
+              src="/logo.png"
+              alt="QuestChase Bureau Emblem"
+              width={64}
+              height={64}
+              className="w-full h-full object-cover"
+              priority
+            />
           </div>
           <div className="text-[10px] font-cinematic font-bold tracking-widest text-crimson-bright uppercase mb-1">
             COMMISSION DOCKET • FORM QC-01
@@ -92,7 +113,9 @@ export default function RegisterPage() {
           </div>
         )}
 
-        {requiresEmailConfirmation ? (
+        {isRegistering ? (
+          <CommissionOperativeSkeleton />
+        ) : requiresEmailConfirmation ? (
           <div className="space-y-5 text-center py-4">
             <div className="w-12 h-12 mx-auto rounded-full bg-gold/10 border border-gold/40 flex items-center justify-center text-gold">
               <Mail className="w-6 h-6 text-gold animate-bounce" />
